@@ -1,0 +1,205 @@
+[
+  {
+    "claim_id": "clm_0001",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "action",
+    "predicate": "led_migration",
+    "subject": "backend services to Kubernetes",
+    "magnitude": null,
+    "source_document": {
+      "document_id": "doc_resume_2026",
+      "label": "priya_resume_2026.pdf",
+      "kind": "existing_resume"
+    },
+    "source_span": {
+      "span_id": "span_0007",
+      "text": "Led migration of 42 services to Kubernetes, cutting deploy time 38%",
+      "char_start": 812,
+      "char_end": 878
+    },
+    "extractor_confidence": 0.94,
+    "verification": {
+      "state": "user_confirmed",
+      "provenance": "document_sourced",
+      "verified_at": "2026-07-14T09:22:00Z"
+    }
+  },
+  {
+    "claim_id": "clm_0002",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "scope",
+    "predicate": "scope_services_count",
+    "subject": "services migrated",
+    "magnitude": { "value": 42, "unit": "services" },
+    "source_document": {
+      "document_id": "doc_resume_2026",
+      "label": "priya_resume_2026.pdf",
+      "kind": "existing_resume"
+    },
+    "source_span": {
+      "span_id": "span_0007",
+      "text": "Led migration of 42 services to Kubernetes, cutting deploy time 38%",
+      "char_start": 812,
+      "char_end": 878
+    },
+    "extractor_confidence": 0.91,
+    "verification": {
+      "state": "user_confirmed",
+      "provenance": "document_sourced",
+      "verified_at": "2026-07-14T09:22:00Z"
+    }
+  },
+  {
+    "claim_id": "clm_0003",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "platform",
+    "predicate": "platform_kubernetes",
+    "subject": "container orchestration",
+    "magnitude": null,
+    "source_document": {
+      "document_id": "doc_resume_2026",
+      "label": "priya_resume_2026.pdf",
+      "kind": "existing_resume"
+    },
+    "source_span": {
+      "span_id": "span_0007",
+      "text": "Led migration of 42 services to Kubernetes, cutting deploy time 38%",
+      "char_start": 812,
+      "char_end": 878
+    },
+    "extractor_confidence": 0.97,
+    "verification": {
+      "state": "user_confirmed",
+      "provenance": "document_sourced",
+      "verified_at": "2026-07-14T09:22:00Z"
+    }
+  },
+  {
+    "claim_id": "clm_0004",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "outcome_metric",
+    "predicate": "outcome_deploy_time_down",
+    "subject": "deployment lead time",
+    "magnitude": { "value": 38, "unit": "percent", "direction": "decrease" },
+    "source_document": {
+      "document_id": "doc_resume_2026",
+      "label": "priya_resume_2026.pdf",
+      "kind": "existing_resume"
+    },
+    "source_span": {
+      "span_id": "span_0007",
+      "text": "Led migration of 42 services to Kubernetes, cutting deploy time 38%",
+      "char_start": 812,
+      "char_end": 878
+    },
+    "extractor_confidence": 0.62,
+    "verification": {
+      "state": "unverified",
+      "provenance": "document_sourced",
+      "verified_at": null,
+      "note": "Metric-probing interview question queued: how was the 38% measured, and over what window?"
+    }
+  },
+  {
+    "claim_id": "clm_0005",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "scope",
+    "predicate": "scope_engineers_mentored",
+    "subject": "engineers directly mentored",
+    "magnitude": { "value": 4, "unit": "engineers" },
+    "source_document": {
+      "document_id": "doc_resume_2026",
+      "label": "priya_resume_2026.pdf",
+      "kind": "existing_resume"
+    },
+    "source_span": {
+      "span_id": "span_0012",
+      "text": "Mentored 4 junior engineers through their first on-call rotations",
+      "char_start": 1104,
+      "char_end": 1169
+    },
+    "extractor_confidence": 0.9,
+    "verification": {
+      "state": "user_confirmed",
+      "provenance": "document_sourced",
+      "verified_at": "2026-07-14T09:31:00Z",
+      "note": "Ground truth for the linker demo: rejects any generated sentence claiming a team larger than 4."
+    }
+  },
+  {
+    "claim_id": "clm_0006",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "skill",
+    "predicate": "skill_proficiency",
+    "subject": "Python",
+    "magnitude": { "value": "primary", "unit": "self_rated_level", "years": 6 },
+    "source_document": {
+      "document_id": "doc_interview_0031",
+      "label": "evidence_interview_session_31",
+      "kind": "interview_session"
+    },
+    "source_span": {
+      "span_id": "turn_0044",
+      "text": "Python has been my primary language for about six years, across two employers.",
+      "char_start": 0,
+      "char_end": 77
+    },
+    "extractor_confidence": 0.88,
+    "verification": {
+      "state": "user_confirmed",
+      "provenance": "self_attested",
+      "verified_at": "2026-07-15T18:03:00Z"
+    }
+  },
+  {
+    "claim_id": "clm_0007",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "outcome_metric",
+    "predicate": "outcome_infra_cost_down",
+    "subject": "monthly cloud infrastructure spend",
+    "magnitude": { "value": null, "unit": "percent", "direction": "decrease" },
+    "source_document": {
+      "document_id": "doc_interview_0031",
+      "label": "evidence_interview_session_31",
+      "kind": "interview_session"
+    },
+    "source_span": {
+      "span_id": "turn_0071",
+      "text": "We definitely brought the cloud bill down after the migration, though I never saw the final number.",
+      "char_start": 0,
+      "char_end": 98
+    },
+    "extractor_confidence": 0.55,
+    "verification": {
+      "state": "unverified",
+      "provenance": "self_attested",
+      "verified_at": null,
+      "note": "Soft claim with no magnitude and no document evidence. Cannot reach a rendered document until a number and source are supplied."
+    }
+  },
+  {
+    "claim_id": "clm_0008",
+    "candidate_id": "cand_priya_ndiaye",
+    "claim_type": "credential",
+    "predicate": "holds_certification",
+    "subject": "Certified Kubernetes Administrator (CKA)",
+    "magnitude": { "value": 2024, "unit": "year_earned" },
+    "source_document": {
+      "document_id": "doc_resume_2026",
+      "label": "priya_resume_2026.pdf",
+      "kind": "existing_resume"
+    },
+    "source_span": {
+      "span_id": "span_0021",
+      "text": "Certified Kubernetes Administrator (CKA), earned 2024",
+      "char_start": 1543,
+      "char_end": 1596
+    },
+    "extractor_confidence": 0.96,
+    "verification": {
+      "state": "user_confirmed",
+      "provenance": "document_sourced",
+      "verified_at": "2026-07-14T09:35:00Z"
+    }
+  }
+]
