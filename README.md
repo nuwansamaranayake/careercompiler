@@ -1,5 +1,10 @@
 # CareerCompiler
 
+> **Status: scaffold (v0.1).** The engineering harness is built and verified: live smoke test,
+> fail-loud guards, migration checks, CI. The architecture described below is the design being
+> built; Phase 1 is in progress. [ROADMAP.md](ROADMAP.md) shows what exists today versus what
+> is next.
+
 **A compiler, not a ghostwriter.** Your verified career facts are the source code, the job
 description is the target platform, and the resume is a compiled artifact in which every sentence
 links back to evidence. Fabrication is not discouraged. It is structurally impossible.
@@ -7,26 +12,27 @@ links back to evidence. Fabrication is not discouraged. It is structurally impos
 ## What it is
 
 CareerCompiler produces a resume and cover letter tailored to a specific job description, built from
-an existing resume plus a structured interview, with a provable zero-fabrication guarantee. It gives
-an honest fit assessment that will say "do not apply," and it emits an interview-prep pack from the
-same evidence.
+an existing resume plus a structured interview, designed so fabrication is a build failure: every
+generated sentence must cite fact IDs and pass an entailment gate (Phase 1), proven by evals that
+plant violations the gate must catch. It gives an honest fit assessment that will say "do not apply,"
+and it emits an interview-prep pack from the same evidence.
 
 Every mainstream tool in this category works the same way: paste resume, paste JD, receive a
-rewritten document optimized for keyword coverage. Two failure modes follow. The model inflates — a
-skill grazed once becomes "expert," a team of two becomes "led cross-functional teams" — and keyword
-stuffing reads machine-written exactly when recruiters are deploying detectors to catch it. As open
-source, this tool serves the people who most need it and can least afford subscriptions: students,
-career changers, and job seekers anywhere, with a local-model mode so the most personal document a
-person owns never has to leave their machine.
+rewritten document optimized for keyword coverage (the tools we reviewed as of July 2026). Two
+failure modes follow. The model inflates: a skill grazed once becomes "expert," a team of two
+becomes "led cross-functional teams," and keyword stuffing reads machine-written exactly when
+recruiters are deploying detectors to catch it. As open source, this tool serves the people who most
+need it and can least afford subscriptions: students, career changers, and job seekers anywhere,
+with a local-model mode so the most personal document a person owns never has to leave their machine.
 
-## How it works
+## How it works (the design)
 
 Separate the fact base from the rendering, and put a deterministic linker between them.
 
 1. **The Career Fact Graph.** An extractor and a resumable interview mine the user's history into
    atomic, typed claims. "Led migration of 42 services to Kubernetes, cutting deploy time 38%"
    decomposes into `led_migration`, `scope_42_services`, `platform_kubernetes`,
-   `outcome_deploy_time_down`, `magnitude_38_pct` — each with its own evidence reference, confidence,
+   `outcome_deploy_time_down`, `magnitude_38_pct`, each with its own evidence reference, confidence,
    and user-verification state.
 2. **Deterministic selection.** Which facts make the page is a knapsack problem, not vibes: maximize
    requirement coverage, evidence strength, recency, and quantified impact under a hard page budget.
@@ -34,36 +40,54 @@ Separate the fact base from the rendering, and put a deterministic linker betwee
 3. **The claim linker.** Generation is unconstrained in phrasing, fully constrained in substance.
    Every generated sentence declares the fact IDs it renders; a self-hosted NLI cross-encoder
    confirms entailment. A stronger verb than the evidence supports is a compile error.
-4. **The Fit Report** decomposes the JD into typed requirements and scores each against the graph —
-   matched, transferable, or unmatched — and will tell you honestly not to apply.
+4. **The Fit Report** decomposes the JD into typed requirements and scores each against the graph:
+   matched, transferable, or unmatched, and will tell you honestly not to apply.
+
+## What exists today (verified)
+
+This scaffold's doctrine is already enforced, not promised. Three checks you can run in five minutes:
+
+1. `python scripts/smoke_test.py` against a running instance: hits real endpoints and asserts
+   non-empty, schema-valid data. Passes.
+2. Set `APP_ENV=production` and call `/api/v1/demo`: returns 503, because fixture data outside
+   development is forbidden by code, not by convention.
+3. `python scripts/eval.py`: raises loudly instead of passing vacuously. An eval that cannot
+   fail is theater; the real harness lands in Phase 1.
 
 ## The unique bet
 
-The category leaders compete on templates, match scores, and one-click speed. Our bet is different:
-the only open resume tool that compiles documents from a verified fact base, through an optimization
-layer and an entailment gate, making fabrication a build failure, honesty a feature with teeth, and
-interview prep a free by-product of provenance.
+The category leaders compete on templates, match scores, and one-click speed. No tool we reviewed (July 2026) compiles documents from a verified fact base through an optimizer and an entailment gate. That combination is the bet: fabrication as a build failure, honesty as a feature with teeth, interview prep as a by-product of provenance.
+
+The full scoped novelty statement, with the field surveyed, is in [PRD.md](PRD.md).
 
 ## Quickstart (local, zero external keys)
 
+### Standalone clone
+
 ```bash
 python -m venv .venv
-.venv\Scripts\activate            # Windows  (source .venv/bin/activate on POSIX)
-pip install -e ../groundwork      # sibling shared library (uv users: uv sync)
-pip install -e .[dev]
-copy .env.example .env            # leave keys blank; the demo runs on synthetic data
+source .venv/bin/activate         # POSIX     (.venv\Scripts\activate on Windows)
+pip install -e .[dev]             # groundwork resolves from GitHub automatically
+cp .env.example .env              # POSIX     (copy .env.example .env on Windows)
 uvicorn app.main:app --reload
 ```
 
-In another shell:
+### Developing the whole portfolio (sibling checkout, editable)
 
 ```bash
-set API_PORT=8000 && set SMOKE_TEST_TOKEN=dev && python scripts/smoke_test.py   # -> SMOKE OK
+git clone https://github.com/nuwansamaranayake/groundwork ../groundwork
+pip install -e ../groundwork
+pip install -e .[dev]
 ```
 
-The `/api/v1/demo` endpoint serves the synthetic dataset in `data/synthetic/` — no OpenRouter
-key, Postgres, or Redis needed to see the app respond. Those are required only for Phase 1
-features (real extraction, persistence, migrations).
+Then, in another shell:
+
+```bash
+export API_PORT=8000 SMOKE_TEST_TOKEN=dev && python scripts/smoke_test.py   # POSIX -> SMOKE OK
+set API_PORT=8000 && set SMOKE_TEST_TOKEN=dev && python scripts/smoke_test.py  # Windows
+```
+
+The `/api/v1/demo` endpoint serves the synthetic dataset in `data/synthetic/`: no OpenRouter key, Postgres, or Redis is needed to see the app respond. Those are required only for Phase 1 features (real extraction, persistence, migrations).
 
 ## Demo
 

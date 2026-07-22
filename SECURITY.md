@@ -32,5 +32,10 @@ that caught them.
 No provider keys are needed for the synthetic demo. Real keys (`OPENROUTER_API_KEY` and datastore
 credentials) live only in `.env`, which is git-ignored; `.env.example` ships with blank values.
 Secrets are never logged — LLM traces record model, version, prompt hash, temperature, latency, and
-cost, never raw credentials. Report vulnerabilities privately to the eng lead rather than opening a
-public issue.
+cost, never raw credentials.
+
+## Reporting a vulnerability
+
+Report suspected vulnerabilities privately to **nuwans@hotmail.com**. Do not open a public issue.
+You will receive an acknowledgment within 72 hours. Please allow time to investigate and ship a fix
+before any public disclosure; a coordinated disclosure timeline will be agreed with you.

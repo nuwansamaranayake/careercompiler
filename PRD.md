@@ -1,5 +1,15 @@
 # PRD — CareerCompiler
 
+## Novelty (scoped)
+
+As of July 2026, across the resume and cover-letter tools we surveyed in the AI career-document
+field (paste-resume-paste-JD rewriters, ATS keyword optimizers, match-score generators, and
+one-click tailoring products), none compiles a finished document from a verified, typed fact base
+through a deterministic optimizer and an entailment gate that turns an unsupported sentence into a
+build failure. That combination, a typed fact graph plus deterministic selection plus
+provenance-checked generation, is the scoped bet. This is a claim about the tools we reviewed as of
+July 2026, not a proof that no such tool exists anywhere.
+
 ## Users
 
 - **The student / new graduate.** Has thin, scattered evidence and no budget for a subscription
