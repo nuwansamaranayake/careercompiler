@@ -1,9 +1,10 @@
 # CareerCompiler
 
-> **Status: scaffold (v0.1).** The engineering harness is built and verified: live smoke test,
-> fail-loud guards, migration checks, CI. The architecture described below is the design being
-> built; Phase 1 is in progress. [ROADMAP.md](ROADMAP.md) shows what exists today versus what
-> is next.
+> **Status: Phase 1 honest analyzer built (v0.1, branch `phase-1`).** Span-anchored fact
+> extraction, JD parsing, the deterministic matcher, and the Fit Report with its honest
+> do-not-apply verdict are real, tested, and eval-gated. Generation (and with it the claim
+> linker and NLI gate) is Phase 2, as designed: the analyzer ships first.
+> [ROADMAP.md](ROADMAP.md) shows what exists today versus what is next.
 
 **A compiler, not a ghostwriter.** Your verified career facts are the source code, the job
 description is the target platform, and the resume is a compiled artifact in which every sentence
@@ -51,8 +52,11 @@ This scaffold's doctrine is already enforced, not promised. Three checks you can
    non-empty, schema-valid data. Passes.
 2. Set `APP_ENV=production` and call `/api/v1/demo`: returns 503, because fixture data outside
    development is forbidden by code, not by convention.
-3. `python scripts/eval.py`: raises loudly instead of passing vacuously. An eval that cannot
-   fail is theater; the real harness lands in Phase 1.
+3. `python scripts/eval.py`: the golden analyzer suite. Every EVAL.md bound passes at 1.0
+   and the report is byte-reproducible; its first run caught two real matcher defects
+   (FAILURES.md). A missed bound fails CI: the eval job is required.
+4. `python -m app.cli fit --facts data/synthetic/golden/golden.json --case gap-disqualifier`:
+   an honest DO-NOT-APPLY verdict with the case against applying, no server or key needed.
 
 ## The unique bet
 

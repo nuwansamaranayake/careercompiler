@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 1 honest analyzer (branch `phase-1`)
+- Span-anchored atomic claims on the groundwork Claim spine; failed anchors stored as
+  rejected and excluded from matching. Self-attested entry path flagged distinctly.
+- JD parser (schema-forced) with keyless entry path; deterministic matcher (generic tokens
+  cannot carry a direct match; transferable never presented as direct); Fit Report with the
+  honest do-not-apply verdict and the case against applying.
+- Golden analyzer eval enforcing pre-written bounds; observed all PASS at 1.0 after the
+  suite's first run caught two real matcher defects (FAIL-0002). Byte-reproducible.
+- Persisted candidate/claims/jobs/fit API with bearer auth; alembic 0002 (MIGRATION OK: 8
+  tables observed); CLI fit that exits nonzero on do-not-apply; container migrates and
+  asserts count before serving.
+- Flywheel: Seismograph contract for the extraction stage, validated against Seismograph's
+  DSL; key-gated LLM eval observed recall 1.00, paraphrase jaccard 0.92 on canonical fact
+  anchors (FAIL-0003: extraction model swapped to google/gemini-2.5-flash after qwen
+  ignored the strict schema it advertised).
+
+### Changed
+- CI eval job is now REQUIRED ("eval (required)").
+- Smoke exercises the full keyless business loop, not just health + fixture.
+
 ### Changed
 - Dependency on `aignite-groundwork` switched from an editable path source to a pinned git
   dependency (`git+https://github.com/nuwansamaranayake/groundwork@v0.1.0`) so standalone clones and CI resolve

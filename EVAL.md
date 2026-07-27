@@ -34,9 +34,12 @@ with the code they measure.
 
 ## Status
 
-`scripts/eval.py` currently raises `NotImplementedError("eval harness lands in Phase 1")`
-**on purpose**; the real harness enforcing the table above lands in Phase 1 milestone M6
-(see LOOP_STATE.md), and the CI eval job becomes required in M9.
+The harness is real as of Phase 1: `scripts/eval.py` enforces the table above (first
+published run 2026-07-23, all bounds PASS at 1.0, byte-reproducible — `eval_report.md`),
+and its first run caught two real matcher defects before they reached a verdict
+(FAILURES.md FAIL-0002). The key-gated extraction section (`scripts/eval_llm.py`) observed
+planted-fact recall 1.00 and paraphrase jaccard 0.92 on canonical anchors
+(`eval_report_llm.md`). The CI eval job is required.
 
 ## How `make eval` will measure it
 

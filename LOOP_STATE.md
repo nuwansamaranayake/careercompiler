@@ -8,27 +8,27 @@ flywheel duty (a Seismograph contract ships with the LLM stage).
 
 ## Milestones (commit each; gate.py after each)
 
-- [ ] M1  EVAL.md numeric thresholds first; LOOP_STATE; branch
-- [ ] M2  engine/facts: span-anchored AtomicClaim model on groundwork.Claim; LLM fact
+- [x] M1  EVAL.md numeric thresholds first; LOOP_STATE; branch
+- [x] M2  engine/facts: span-anchored AtomicClaim model on groundwork.Claim; LLM fact
          extractor via gateway (strict JSON schema); self_attested vs document_sourced flags;
          data-entry path for claims (no LLM needed) (+tests, stub gateway)
-- [ ] M3  engine/jd: JD parser (LLM, schema-forced) -> typed Requirements (must_have /
+- [x] M3  engine/jd: JD parser (LLM, schema-forced) -> typed Requirements (must_have /
          nice_to_have; skill|experience|education|other); data-entry path (+tests)
-- [ ] M4  engine/matcher: deterministic requirement<->claim scoring — direct + transferable
+- [x] M4  engine/matcher: deterministic requirement<->claim scoring — direct + transferable
          (never presented as direct), embedding similarity + token rules, explainable
          per-requirement evidence (+tests)
-- [ ] M5  engine/fit: Fit Report — matched/partial/gap rows, disqualifying-gap logic, honest
+- [x] M5  engine/fit: Fit Report — matched/partial/gap rows, disqualifying-gap logic, honest
          apply / do-not-apply verdict with the case against applying (+tests)
-- [ ] M6  scripts/eval.py: deterministic golden suite (synthetic fact graphs + labeled JDs,
+- [x] M6  scripts/eval.py: deterministic golden suite (synthetic fact graphs + labeled JDs,
          planted gaps, pre-authored JD paraphrases) meeting EVAL.md bounds; byte-reproducible
-- [ ] M7  schema + alembic (candidates, source_documents, atomic_claims, job_postings,
+- [x] M7  schema + alembic (candidates, source_documents, atomic_claims, job_postings,
          requirements, match_scores, fit_reports) EXPECTED_TABLE_COUNT=8; API: candidates,
          claims (entry + key-gated extract), jobs (entry + key-gated parse), fit; CLI
          `python -m app.cli fit`; smoke = real deterministic loop keyless; Dockerfile
          migrate-on-start
-- [ ] M8  flywheel: contracts/extraction-stability.yaml (Seismograph DSL, versioned here);
+- [x] M8  flywheel: contracts/extraction-stability.yaml (Seismograph DSL, versioned here);
          key-gated extraction paraphrase-invariance check; one REAL extraction observed
-- [ ] M9  CI eval -> required; README/contracts.md/CHANGELOG truth pass; full gate + compose
+- [x] M9  CI eval -> required; README/contracts.md/CHANGELOG truth pass; full gate + compose
          smoke + prod-guard
 
 ## DECISION log
@@ -49,4 +49,4 @@ flywheel duty (a Seismograph contract ships with the LLM stage).
 (none)
 
 ## Next task
-M2: engine/facts.
+Phase 1 gates: full gate + compose smoke + prod-guard, then GATES_PASSED and stop (release only on explicit go).

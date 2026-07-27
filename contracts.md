@@ -12,9 +12,11 @@ it.
 | Load demo Career Fact Graph | GET | `/api/v1/demo` | implemented | Returns `{items:[...]}` from `data/synthetic/`. Development-only; returns 503 outside development (Doctrine Standard 3). |
 | API reference (Swagger UI) | GET | `/docs` | implemented | Served by FastAPI. |
 | OpenAPI schema | GET | `/openapi.json` | implemented | Served by FastAPI; CI diffs this file against it. |
-| Upload existing resume as a source document | POST | `/api/v1/candidates/{id}/sources` | planned — Phase 1 | Stores the raw source for span-anchored extraction. |
-| Extract atomic claims from a source | POST | `/api/v1/fact-graph/extract` | planned — Phase 1 | LLM decomposes bullets into typed, span-anchored claims with provenance. |
-| View the Career Fact Graph | GET | `/api/v1/candidates/{id}/facts` | planned — Phase 1 | Lists atomic claims with confidence and verification state. |
-| Parse a job description into requirements | POST | `/api/v1/job-postings/parse` | planned — Phase 1 | Schema-forced parse into typed requirements. |
-| Generate the Fit Report | POST | `/api/v1/fit-report` | planned — Phase 1 | Deterministic matcher scores requirements: matched / transferable / gap, plus apply-or-not. |
-| Set a claim's verification state | POST | `/api/v1/facts/{id}/verify` | planned — Phase 1 | Records user verification; unverified claims cannot reach a rendered document. |
+| Create a candidate (optionally with resume) | POST | `/api/v1/candidates` | implemented | Creates the candidate; stores the resume as a source document when given. Bearer auth when `SMOKE_TEST_TOKEN` set. |
+| Enter claims (keyless, self-attested) | POST | `/api/v1/candidates/{id}/claims` | implemented | Explicit data-entry path, flagged self_attested — distinct from document_sourced. |
+| Extract atomic claims from the resume (LLM) | POST | `/api/v1/candidates/{id}/claims/extract` | implemented | Key-gated (typed 503 without a key). Span-anchored; failed anchors stored as rejected and never match. |
+| Create a job (optionally with requirements) | POST | `/api/v1/jobs` | implemented | Entry-path requirements accepted inline. |
+| Parse the JD into requirements (LLM) | POST | `/api/v1/jobs/{id}/requirements/parse` | implemented | Key-gated, schema-forced. |
+| Run the fit | POST | `/api/v1/fit` | implemented | Deterministic matcher + persisted Fit Report with the honest apply / do-not-apply verdict. |
+| Read a fit report | GET | `/api/v1/fit/{id}` | implemented | Stored report + per-requirement match rows. |
+| Set a claim's verification state | POST | `/api/v1/facts/{id}/verify` | planned — Phase 2 | Records user verification; unverified claims cannot reach a rendered document (generation era). |
