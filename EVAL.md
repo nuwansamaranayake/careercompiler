@@ -8,6 +8,15 @@ quality slider here; it is a build failure, and the eval proves the gate actuall
 supporting properties keep the honest analyzer honest under real-world messiness — reworded JDs,
 different phrasings of the same evidence, and machine parsers on the far side of a render.
 
+## Published limits
+
+This sentence is what the root page publishes, verbatim. The gate fails if the page and this block drift apart.
+
+<!-- LIMITS -->
+On a golden suite of 4 labelled job cases against a 6-fact synthetic career graph, the analyzer places every requirement in the right bucket (matcher accuracy 1.0), returns the correct apply or do-not-apply verdict on every case including planted disqualifying gaps (1.0), never presents transferable evidence as direct (0 violations), and holds its verdict across pre-authored paraphrases of the job description (1.0); the suite is synthetic and small, so it does not measure performance on real resumes or real postings.
+<!-- /LIMITS -->
+
+
 ## Phase 1 acceptance thresholds (written before the harness, 2026-07-23)
 
 Phase 1 ships the honest analyzer (extraction, JD parsing, matcher, Fit Report — no

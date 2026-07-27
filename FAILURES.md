@@ -138,3 +138,23 @@ the *diagnosed* root cause separately (Standard 5).
   phase that actually imports a local cross-encoder). Tests unchanged and still green.
 - **Doctrine link**: a dependency you do not import is a claim you cannot back. It also
   slowed every deploy, which is how it was noticed while shipping a security fix.
+
+## FAIL-0007 — Every published hostname 404ed at the root URL
+
+- **Date**: 2026-07-27
+- **Surface**: `GET /` on `https://careercompiler.aigniteconsulting.ai`
+- **Reported symptom**: none from any gate. A browser visiting the hostname received
+  `404 {"detail":"Not Found"}` as `application/json`, measured in production.
+- **Root cause, named correctly**: The front door 404ed on every published hostname because the estate gate asserted /health and the business loop and never asserted what a browser receives at the root URL, and a gate that tests only the paths its author remembers will pass forever while the front door is broken.
+- **Not the cause**: a missing decorator on six apps. That is the instance. The class is an
+  unswept assertion gap, the same shape as the 2026-07-27 unauthenticated-reads incident,
+  where a defect found in two repos was fixed in those two and never swept across the estate.
+- **Fix**: `GET /` serves a self-contained static page on every app, and the gap is closed as
+  a class in two places. Each `scripts/gate.py` asserts the root route returns 200 `text/html`
+  carrying the app name and the EVAL.md limits sentence verbatim. `estate_smoke.py` sends a
+  browser-shaped request (`Accept: text/html`) to every hostname it finds **by parsing
+  API_CONTRACT.md**, not from a literal list, so a seventh app is covered without editing the
+  gate, and it fails on placeholder text.
+- **Doctrine link**: rule 9, sweep the class not the instance. Also rule 10: the hostname
+  enumeration fails loudly when it finds no hostnames, rather than passing over an empty set.
+

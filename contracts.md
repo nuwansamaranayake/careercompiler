@@ -9,6 +9,7 @@ it.
 
 | Frontend call (Phase 2) | Method | Path | Status | Notes |
 |---|---|---|---|---|
+| Front page (browser) | GET | `/` | none | Self-contained HTML: thesis, what it measures, the EVAL.md limits sentence, the endpoint list, build stamp. Public by design. |
 | Health/liveness probe | GET | `/health` | implemented | Returns `{status, env}`. |
 | Load demo Career Fact Graph | GET | `/api/v1/demo` | implemented | Returns `{items:[...]}` from `data/synthetic/`. Development-only; returns 503 outside development (Doctrine Standard 3). |
 | API reference (Swagger UI) | GET | `/docs` | implemented | Served by FastAPI. |
