@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-07-27
+
+### Eval
+- matcher accuracy 1.0 (>= 0.90), verdict correctness 1.0, transferable violations 0,
+  paraphrase invariance 1.0, match-set stability 1.0. Byte-reproducible.
+
+### Changed
+- Unused `sentence-transformers` (CUDA torch) dropped; image 5.8 GB -> 608 MB.
+- `scripts/gate.py` enumerates routes and fails on any unguarded non-public route.
+- Eval report no longer embeds an environment-dependent line, so it is byte-identical with
+  or without an ambient API key.
+
+No contract change: this repo's reads were already bearer-gated in v0.2.1.
+
 ## [0.2.1] - 2026-07-23
 
 ### Removed
