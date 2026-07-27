@@ -14,7 +14,7 @@ links back to evidence. Fabrication is not discouraged. It is structurally impos
 
 CareerCompiler produces a resume and cover letter tailored to a specific job description, built from
 an existing resume plus a structured interview, designed so fabrication is a build failure: every
-generated sentence must cite fact IDs and pass an entailment gate (Phase 1), proven by evals that
+generated sentence must cite fact IDs and pass an entailment gate (Phase 2), proven by evals that
 plant violations the gate must catch. It gives an honest fit assessment that will say "do not apply,"
 and it emits an interview-prep pack from the same evidence.
 
@@ -84,14 +84,22 @@ pip install -e ../groundwork
 pip install -e .[dev]
 ```
 
-Then, in another shell:
+The smoke test exercises the persisted fit loop, so it needs Postgres up and migrated first
+(its docstring says so: "Requires the database to be up"). In another shell:
 
 ```bash
-export API_PORT=8000 SMOKE_TEST_TOKEN=dev && python scripts/smoke_test.py   # POSIX -> SMOKE OK
-set API_PORT=8000 && set SMOKE_TEST_TOKEN=dev && python scripts/smoke_test.py  # Windows
+docker compose up -d db           # Postgres 16 (pgvector) on localhost:5432
+alembic upgrade head              # apply migrations to the fresh database
+export API_PORT=8000 SMOKE_TEST_TOKEN=dev-smoke-token && python scripts/smoke_test.py   # POSIX -> SMOKE OK
+set API_PORT=8000 && set SMOKE_TEST_TOKEN=dev-smoke-token && python scripts/smoke_test.py  # Windows
 ```
 
-The `/api/v1/demo` endpoint serves the synthetic dataset in `data/synthetic/`: no OpenRouter key, Postgres, or Redis is needed to see the app respond. Those are required only for Phase 1 features (real extraction, persistence, migrations).
+(The token matches `SMOKE_TEST_TOKEN` in `.env.example`, which the server read when you copied it
+to `.env`.)
+
+Only the `/api/v1/demo` endpoint is key- and database-free: it serves the synthetic dataset in
+`data/synthetic/` with no OpenRouter key, Postgres, or Redis. Those are required for the Phase 1
+features (real extraction, persistence, migrations) and therefore for the smoke test above.
 
 ## Demo
 
