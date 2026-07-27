@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — Phase 1 honest analyzer (branch `phase-1`)
+## [0.2.0] - 2026-07-23
+
+### Added — Phase 1 honest analyzer
 - Span-anchored atomic claims on the groundwork Claim spine; failed anchors stored as
   rejected and excluded from matching. Self-attested entry path flagged distinctly.
 - JD parser (schema-forced) with keyless entry path; deterministic matcher (generic tokens

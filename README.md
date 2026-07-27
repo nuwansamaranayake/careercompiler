@@ -1,6 +1,6 @@
 # CareerCompiler
 
-> **Status: Phase 1 honest analyzer built (v0.1, branch `phase-1`).** Span-anchored fact
+> **Status: Phase 1 honest analyzer released (v0.2.0).** Span-anchored fact
 > extraction, JD parsing, the deterministic matcher, and the Fit Report with its honest
 > do-not-apply verdict are real, tested, and eval-gated. Generation (and with it the claim
 > linker and NLI gate) is Phase 2, as designed: the analyzer ships first.
