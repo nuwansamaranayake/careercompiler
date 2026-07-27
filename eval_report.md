@@ -12,5 +12,3 @@ case mixed: verdict=apply (expected apply), matched=['cost_optimization', 'kuber
 | transferable_violations | 0 | <= 0 | PASS |
 | paraphrase_invariance | 1.0 | >= 1.0 | PASS |
 | match_set_stability_min | 1.0 | >= 0.85 | PASS |
-
-key-gated extraction section: run scripts/eval_llm.py (not part of this deterministic report)

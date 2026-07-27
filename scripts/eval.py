@@ -104,14 +104,16 @@ def main() -> None:
         val = round(v, 4) if isinstance(v, float) else v
         lines.append(f"| {k} | {val} | {op} {bound} | {'PASS' if passes[k] else 'FAIL'} |")
     if os.environ.get("OPENROUTER_API_KEY"):
-        lines += ["", "key-gated extraction section: run scripts/eval_llm.py "
+        note_lines = ["", "key-gated extraction section: run scripts/eval_llm.py "
                       "(not part of this deterministic report)"]
     else:
-        lines += ["", "key-gated extraction section: NOT RUN (no OPENROUTER_API_KEY); "
+        note_lines = ["", "key-gated extraction section: NOT RUN (no OPENROUTER_API_KEY); "
                       "deterministic bounds above are the required gate"]
     text = "\n".join(lines) + "\n"
     REPORT.write_text(text, encoding="utf-8", newline="\n")
-    print(text)
+    # Environment-dependent key-status note goes to stdout only: the report file
+    # must stay byte-identical regardless of ambient keys.
+    print(text + "\n".join(note_lines))
     if not all(passes.values()):
         print("EVAL FAILED: at least one threshold missed (see rows above)", file=sys.stderr)
         sys.exit(1)
