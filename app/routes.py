@@ -10,7 +10,7 @@ GET  /api/v1/fit/{id}                         stored report with rows
 
 The keyless entry paths are real product features (self-attested facts, hand-typed
 requirements). The LLM paths refuse loudly without a key — no silent fallback between the
-two (Standard 3). Bearer auth on mutations when SMOKE_TEST_TOKEN is set.
+two (Standard 3). Bearer auth on mutations and fit-report reads when SMOKE_TEST_TOKEN is set.
 """
 from __future__ import annotations
 
@@ -43,14 +43,27 @@ def _gateway() -> LLMGateway:
             detail="LLM extraction requires OPENROUTER_API_KEY; use the data-entry "
                    "endpoint for the keyless path",
         )
-    return LLMGateway(BaseConfig(
+    gw = LLMGateway(BaseConfig(
         openrouter_api_key=settings.openrouter_api_key,
         openrouter_base_url=settings.openrouter_base_url,
     ))
+    # Bound the client so a slow model cannot pin the connection pool. Clamped here (not
+    # only via groundwork config) so the app's LLM_TIMEOUT_SECONDS applies regardless of
+    # the groundwork version in use — the pinned v0.1.0 gateway has no timeout knob and
+    # ships the OpenAI SDK defaults (600s, 2 retries).
+    gw._client = gw._client.with_options(
+        timeout=settings.llm_timeout_seconds, max_retries=settings.llm_max_retries)
+    return gw
 
 
 def _embedder(name: str):
     if name == "openrouter":
+        if not settings.openrouter_api_key or not settings.embedding_model:
+            raise HTTPException(
+                status_code=503,
+                detail="embedder 'openrouter' requires OPENROUTER_API_KEY and "
+                       "EMBEDDING_MODEL; use embedder 'hashing' for the keyless path",
+            )
         return OpenRouterEmbedder(
             api_key=settings.openrouter_api_key,
             model=settings.embedding_model,
@@ -136,16 +149,19 @@ def add_claims(cid: int, body: ClaimsIn, authorization: str | None = Header(defa
 def extract_claims(cid: int, authorization: str | None = Header(default=None)):
     _auth(authorization)
     gateway = _gateway()
-    with db.get_session() as s, s.begin():
+    # Load inputs and close the session BEFORE the network call: a slow model must never
+    # hold a DB connection or transaction open. Results are written in a second session.
+    with db.get_session() as s:
         doc = s.execute(sa.select(db.source_documents)
                         .where(db.source_documents.c.candidate_id == cid)
                         .order_by(db.source_documents.c.id.desc())).first()
-        if doc is None:
-            raise HTTPException(status_code=422,
-                                detail="candidate has no resume document to extract from")
-        claims = extract_facts(gateway, settings.llm_model_extraction, doc.text, doc.name)
+    if doc is None:
+        raise HTTPException(status_code=422,
+                            detail="candidate has no resume document to extract from")
+    claims = extract_facts(gateway, settings.llm_model_extraction, doc.text, doc.name)
+    with db.get_session() as s, s.begin():
         n = _store_claims(s, cid, claims)
-        rejected = sum(1 for c in claims if c.core.verification.status == "rejected")
+    rejected = sum(1 for c in claims if c.core.verification.status == "rejected")
     return {"stored": n, "rejected_span_anchor": rejected, "provenance": "document_sourced"}
 
 
@@ -170,14 +186,16 @@ def create_job(body: JobIn, authorization: str | None = Header(default=None)):
 def parse_requirements(jid: int, authorization: str | None = Header(default=None)):
     _auth(authorization)
     gateway = _gateway()
-    with db.get_session() as s, s.begin():
+    # Same discipline as extract_claims: read, close the session, call the LLM, then write.
+    with db.get_session() as s:
         job = s.execute(sa.select(db.job_postings)
                         .where(db.job_postings.c.id == jid)).first()
-        if job is None:
-            raise HTTPException(status_code=404, detail="job not found")
-        if not job.description:
-            raise HTTPException(status_code=422, detail="job has no description to parse")
-        reqs = parse_jd(gateway, settings.llm_model_extraction, job.description)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    if not job.description:
+        raise HTTPException(status_code=422, detail="job has no description to parse")
+    reqs = parse_jd(gateway, settings.llm_model_extraction, job.description)
+    with db.get_session() as s, s.begin():
         for r in reqs:
             s.execute(db.requirements.insert().values(job_id=jid, **r.model_dump()))
     return {"parsed": len(reqs)}
@@ -215,7 +233,8 @@ def run_fit(body: FitIn, authorization: str | None = Header(default=None)):
 
 
 @router.get("/fit/{rid}")
-def get_fit(rid: int):
+def get_fit(rid: int, authorization: str | None = Header(default=None)):
+    _auth(authorization)
     with db.get_session() as s:
         rep = s.execute(sa.select(db.fit_reports)
                         .where(db.fit_reports.c.id == rid)).mappings().first()

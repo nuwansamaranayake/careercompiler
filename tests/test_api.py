@@ -72,6 +72,70 @@ def test_bearer_auth_enforced_when_token_set(client, monkeypatch):
                        headers={"Authorization": "Bearer sekrit"}).status_code == 201
 
 
+def test_get_fit_requires_bearer_when_token_set(client, monkeypatch):
+    from app.config import settings
+    cid, jid = _seed(client)
+    rid = client.post("/api/v1/fit",
+                      json={"candidate_id": cid, "job_id": jid}).json()["fit_report_id"]
+    monkeypatch.setattr(settings, "smoke_test_token", "sekrit")
+    assert client.get(f"/api/v1/fit/{rid}").status_code == 401
+    assert client.get(f"/api/v1/fit/{rid}",
+                      headers={"Authorization": "Bearer sekrit"}).status_code == 200
+
+
+def test_fit_openrouter_embedder_without_key_is_typed_503(client, monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
+    cid, jid = _seed(client)
+    r = client.post("/api/v1/fit",
+                    json={"candidate_id": cid, "job_id": jid, "embedder": "openrouter"})
+    assert r.status_code == 503
+    assert "OPENROUTER_API_KEY" in r.json()["detail"]
+
+
+def test_extract_llm_call_runs_outside_db_transaction(client, monkeypatch):
+    """The gateway call must never run inside an open session/transaction: a slow model
+    would hold a pooled connection for its whole duration (the F4 review finding)."""
+    from app import routes
+    from app.engine.facts import claims_from_entries
+
+    monkeypatch.setattr(routes, "_gateway", lambda: object())
+    opened = []
+    real_get_session = db.get_session
+
+    def tracking_get_session():
+        s = real_get_session()
+        opened.append(s)
+        return s
+
+    monkeypatch.setattr(db, "get_session", tracking_get_session)
+
+    def fake_extract(gateway, model, resume_text, source_name):
+        in_tx = [s for s in opened if s.in_transaction()]
+        assert not in_tx, "LLM call ran inside an open DB transaction"
+        return claims_from_entries(
+            [{"claim_key": "skill_python", "kind": "skill", "statement": "Python"}],
+            source_name=source_name)
+
+    monkeypatch.setattr(routes, "extract_facts", fake_extract)
+    cid = client.post("/api/v1/candidates",
+                      json={"name": "T", "resume_text": "Python"}).json()["candidate_id"]
+    r = client.post(f"/api/v1/candidates/{cid}/claims/extract")
+    assert r.status_code == 201, r.text
+    assert r.json()["stored"] == 1
+
+
+def test_gateway_client_is_time_bounded(monkeypatch):
+    from app import routes
+    from app.config import settings
+    monkeypatch.setattr(settings, "openrouter_api_key", "test-key")
+    monkeypatch.setattr(settings, "llm_timeout_seconds", 12.5)
+    monkeypatch.setattr(settings, "llm_max_retries", 1)
+    gw = routes._gateway()
+    assert gw._client.timeout == 12.5
+    assert gw._client.max_retries == 1
+
+
 def test_malformed_claims_rejected(client):
     cid = client.post("/api/v1/candidates", json={"name": "T"}).json()["candidate_id"]
     r = client.post(f"/api/v1/candidates/{cid}/claims",
