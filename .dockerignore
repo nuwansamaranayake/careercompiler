@@ -1,0 +1,17 @@
+# Keep secrets, history, and local state out of the Docker build context (FAIL-0004).
+# .gitignore protects git only — COPY . . sees everything unless it is listed here.
+.git
+.env
+.env.*
+!.env.example
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.planning
+.claude
+LOOP_STATE.md
+data/local
+*.egg-info
