@@ -27,7 +27,9 @@ class HashingEmbedder:
 
     name = "hashing"
 
-    def __init__(self, dim: int = 256):
+    def __init__(self, dim: int = 4096):
+        # dim sized so short-text token collisions cannot fabricate similarity between
+        # unrelated requirement/claim pairs (observed at dim=256 in the golden eval).
         self._dim = dim
 
     def embed(self, texts: list[str]) -> list[list[float]]:

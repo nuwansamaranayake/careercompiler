@@ -50,3 +50,20 @@ the *diagnosed* root cause separately (Standard 5).
   step the README gives a stranger); Dockerfile installs git before `pip install`.
 - **Doctrine link**: Standard 1 (root cause from the real log, not a retry) and Standard 2 (the
   smoke gate exists to catch exactly this before anyone calls the estate "green").
+
+## FAIL-0002 — The golden eval's first run failed 4 of 5 bounds and found two real matcher defects
+
+- **Date**: 2026-07-23
+- **Surface**: `scripts/eval.py` (golden analyzer suite), first run
+- **Reported symptom**: matcher accuracy 0.82, verdict correctness 0.75 (a planted
+  disqualifying gap produced an "apply" verdict), paraphrase invariance 0.875, match-set
+  stability 0.67.
+- **Diagnosed causes**: (1) generic tokens created false direct matches — "development" in
+  claim_key `people_development` directly satisfied a Go-microservices requirement; (2) at
+  embedding dim=256 the hashing embedder's token collisions fabricated similarity between
+  unrelated requirement/claim pairs, flipping rows between runs of different wordings.
+- **Fix**: key-overlap now ignores generic tokens (a specific token must carry a direct
+  match); hashing dim raised to 4096 so collisions cannot fabricate similarity. All bounds
+  now pass at 1.0 with the thresholds unchanged.
+- **Doctrine link**: the eval gate exists to say no, and did — before any of this reached a
+  user-facing verdict (Standard 1: causes named from the failing rows, not guessed).

@@ -1,0 +1,137 @@
+{
+  "fact_graph": [
+    {"claim_key": "platform_kubernetes", "kind": "skill",
+     "statement": "Migrated 42 production services to Kubernetes clusters."},
+    {"claim_key": "python_backend", "kind": "skill",
+     "statement": "Built Python FastAPI backend services for five years."},
+    {"claim_key": "postgres_operations", "kind": "skill",
+     "statement": "Operated PostgreSQL databases with replication and backups."},
+    {"claim_key": "people_development", "kind": "role",
+     "statement": "Mentored and coached junior engineers into senior roles."},
+    {"claim_key": "cost_reduction", "kind": "outcome",
+     "statement": "Cut cloud infrastructure costs by 38 percent."},
+    {"claim_key": "ci_cd_pipelines", "kind": "skill",
+     "statement": "Designed CI CD pipelines with GitHub Actions."}
+  ],
+  "cases": [
+    {
+      "case_id": "platform-role",
+      "expected_verdict": "apply",
+      "labels": {"kubernetes": "matched", "python": "matched", "postgres": "matched",
+                 "ci_cd": "matched"},
+      "requirements": [
+        {"req_key": "kubernetes", "text": "Run production workloads on Kubernetes",
+         "kind": "skill", "must_have": true},
+        {"req_key": "python", "text": "Python backend development experience",
+         "kind": "skill", "must_have": true},
+        {"req_key": "postgres", "text": "PostgreSQL administration",
+         "kind": "skill", "must_have": false},
+        {"req_key": "ci_cd", "text": "Build and maintain CI CD pipelines",
+         "kind": "skill", "must_have": false}
+      ],
+      "paraphrases": [
+        [
+          {"req_key": "kubernetes", "text": "Operate containerized services on Kubernetes in production",
+           "kind": "skill", "must_have": true},
+          {"req_key": "python", "text": "Strong backend engineering in Python",
+           "kind": "skill", "must_have": true},
+          {"req_key": "postgres", "text": "Administer and tune PostgreSQL",
+           "kind": "skill", "must_have": false},
+          {"req_key": "ci_cd", "text": "Own the CI CD pipeline tooling",
+           "kind": "skill", "must_have": false}
+        ],
+        [
+          {"req_key": "kubernetes", "text": "Kubernetes cluster operations at scale",
+           "kind": "skill", "must_have": true},
+          {"req_key": "python", "text": "Ship backend features in Python",
+           "kind": "skill", "must_have": true},
+          {"req_key": "postgres", "text": "Keep PostgreSQL healthy in production",
+           "kind": "skill", "must_have": false},
+          {"req_key": "ci_cd", "text": "Automate delivery with CI CD",
+           "kind": "skill", "must_have": false}
+        ]
+      ]
+    },
+    {
+      "case_id": "gap-disqualifier",
+      "expected_verdict": "do_not_apply",
+      "labels": {"rust": "gap", "kubernetes": "matched"},
+      "requirements": [
+        {"req_key": "rust", "text": "Rust systems programming with tokio",
+         "kind": "skill", "must_have": true},
+        {"req_key": "kubernetes", "text": "Deploy services to Kubernetes",
+         "kind": "skill", "must_have": true}
+      ],
+      "paraphrases": [
+        [
+          {"req_key": "rust", "text": "Low level systems work written in Rust",
+           "kind": "skill", "must_have": true},
+          {"req_key": "kubernetes", "text": "Kubernetes based deployments",
+           "kind": "skill", "must_have": true}
+        ],
+        [
+          {"req_key": "rust", "text": "Building async Rust services",
+           "kind": "skill", "must_have": true},
+          {"req_key": "kubernetes", "text": "Manage workloads running on Kubernetes",
+           "kind": "skill", "must_have": true}
+        ]
+      ]
+    },
+    {
+      "case_id": "transferable",
+      "expected_verdict": "apply",
+      "labels": {"team_leadership": "partial", "kubernetes": "matched"},
+      "requirements": [
+        {"req_key": "team_leadership", "text": "Grow junior engineers into senior team members",
+         "kind": "experience", "must_have": false},
+        {"req_key": "kubernetes", "text": "Production Kubernetes experience",
+         "kind": "skill", "must_have": true}
+      ],
+      "paraphrases": [
+        [
+          {"req_key": "team_leadership", "text": "Develop junior engineers toward senior levels",
+           "kind": "experience", "must_have": false},
+          {"req_key": "kubernetes", "text": "Hands on Kubernetes in production",
+           "kind": "skill", "must_have": true}
+        ],
+        [
+          {"req_key": "team_leadership", "text": "Coach junior engineers to reach senior roles",
+           "kind": "experience", "must_have": false},
+          {"req_key": "kubernetes", "text": "Operate production clusters on Kubernetes",
+           "kind": "skill", "must_have": true}
+        ]
+      ]
+    },
+    {
+      "case_id": "mixed",
+      "expected_verdict": "apply",
+      "labels": {"kubernetes": "matched", "cost_optimization": "matched", "golang": "gap"},
+      "requirements": [
+        {"req_key": "kubernetes", "text": "Kubernetes platform engineering",
+         "kind": "skill", "must_have": true},
+        {"req_key": "cost_optimization", "text": "Reduce cloud infrastructure cost",
+         "kind": "experience", "must_have": false},
+        {"req_key": "golang", "text": "Go microservices development",
+         "kind": "skill", "must_have": false}
+      ],
+      "paraphrases": [
+        [
+          {"req_key": "kubernetes", "text": "Engineer the Kubernetes platform",
+           "kind": "skill", "must_have": true},
+          {"req_key": "cost_optimization", "text": "Bring cloud infrastructure costs down",
+           "kind": "experience", "must_have": false},
+          {"req_key": "golang", "text": "Write microservices in Go",
+           "kind": "skill", "must_have": false}
+        ],
+        [
+          {"req_key": "kubernetes", "text": "Own Kubernetes platform reliability",
+           "kind": "skill", "must_have": true},
+          {"req_key": "cost_optimization", "text": "Drive down the cost of cloud infrastructure",
+           "kind": "experience", "must_have": false},
+          {"req_key": "golang", "text": "Service development using Go",
+           "kind": "skill", "must_have": false}
+        ]
+      ]
+    }
+  ]
+}

@@ -18,6 +18,11 @@ from .jd import Requirement
 DIRECT_SIM = 0.55
 TRANSFER_SIM = 0.22
 _STOP = {"and", "or", "of", "with", "in", "to", "the", "a", "for", "on", "at"}
+# Generic tokens may not, on their own, establish a direct key match: "development" in
+# people_development must not directly satisfy "golang development" (observed in the
+# golden eval). Specific tokens (kubernetes, postgres, rust...) carry the match.
+_GENERIC = {"development", "engineering", "experience", "operations", "management",
+            "services", "systems", "team", "platform", "senior", "junior"}
 
 
 def _tokens(text: str) -> set[str]:
@@ -56,7 +61,9 @@ def match(
         r_toks = _tokens(f"{r.req_key} {r.text}")
         for c, c_vec in zip(usable, claim_vecs):
             sim = cosine(r_vec, c_vec)
-            key_overlap = bool(_tokens(c.claim_key.replace("_", " ")) & r_toks)
+            key_overlap = bool(
+                (_tokens(c.claim_key.replace("_", " ")) & r_toks) - _GENERIC
+            )
             direct = key_overlap or sim >= DIRECT_SIM
             score = sim + (0.35 if key_overlap else 0.0)
             if score > best[0]:
