@@ -67,3 +67,21 @@ the *diagnosed* root cause separately (Standard 5).
   now pass at 1.0 with the thresholds unchanged.
 - **Doctrine link**: the eval gate exists to say no, and did — before any of this reached a
   user-facing verdict (Standard 1: causes named from the failing rows, not guessed).
+
+## FAIL-0003 — Extraction model advertised structured outputs but ignored the schema
+
+- **Date**: 2026-07-23
+- **Surface**: `scripts/eval_llm.py` first real run (gateway extraction)
+- **Reported symptom**: `AttributeError`/`KeyError` — the model returned a top-level array,
+  then `{"atomic_claims": ["...strings..."]}`, neither matching the strict object schema.
+- **Diagnosed cause**: qwen3.6-flash's OpenRouter listing claims structured-output support,
+  but observed behavior is loose JSON mode: the advertised capability flag and the actual
+  enforcement disagree. Observed behavior wins over catalog claims.
+- **Fix**: extraction model swapped to google/gemini-2.5-flash (schema enforced; 14 clean
+  atomic claims, planted-fact recall 1.00). A one-line envelope adapter remains for
+  top-level-array responses; items still validate strictly.
+- **Second catch, same run**: raw claim_key jaccard across paraphrases was 0.12 with
+  identical facts — model-invented names vary. The contract now compares canonicalized
+  fact anchors (jaccard 0.92 observed), the Seismograph canonicalize-then-compare pattern.
+- **Doctrine link**: Standard 1 (evidence over advertisement) and the portfolio thesis —
+  perception is unreliable; canonicalize before you measure.

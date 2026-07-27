@@ -105,6 +105,11 @@ def extract_facts(
         ],
         json_schema=EXTRACTION_SCHEMA,
     )
+    # Provider quirk observed live (qwen3.6-flash): despite the strict object schema, the
+    # model sometimes returns the claims array at the top level. Normalize the envelope
+    # only — every item still validates strictly below.
+    if isinstance(result, list):
+        result = {"claims": result}
     now = datetime.now(timezone.utc)
     claims: list[AtomicClaim] = []
     for item in result.get("claims", []):

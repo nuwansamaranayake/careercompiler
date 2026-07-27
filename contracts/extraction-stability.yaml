@@ -1,0 +1,25 @@
+# Seismograph behavioral contract for CareerCompiler's LLM extraction stage.
+# Lives in this repo (contracts version with the prompts they protect) and validates
+# against Seismograph's contract DSL. Executed today by scripts/eval_llm.py (key-gated);
+# execution via Seismograph's own runner arrives with its Phase 2 HTTP SUT adapter.
+contract: careercompiler-extraction-stability
+subject: fact-extractor
+invariants:
+  # Compared on canonicalized fact anchors, not the model's invented claim_key names:
+  # naming varies across paraphrases even when the facts are identical (observed).
+  - field: fact_anchors
+    under: [paraphrase, repeat_run]
+    relation: jaccard_at_least
+    threshold: 0.6
+allowed_variation:
+  - field: statement_wording
+    rule: semantically_equivalent
+run_policy: {samples: 3, configs: 1, confidence: 0.9}
+gate: {max_decision_flip_rate: 0.4}
+probes:
+  - id: resume-devops
+    input: |
+      Led migration of 42 services to Kubernetes, cutting deploy time 38%.
+      Built Python FastAPI backends for five years. Operated PostgreSQL with
+      replication and backups. Mentored 4 engineers. Designed CI/CD pipelines
+      with GitHub Actions.
