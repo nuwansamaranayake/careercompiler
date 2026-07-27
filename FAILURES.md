@@ -85,3 +85,26 @@ the *diagnosed* root cause separately (Standard 5).
   fact anchors (jaccard 0.92 observed), the Seismograph canonicalize-then-compare pattern.
 - **Doctrine link**: Standard 1 (evidence over advertisement) and the portfolio thesis —
   perception is unreliable; canonicalize before you measure.
+
+## FAIL-0004 — Adversarial review wave caught 8 defects before release, worst: live key baked into images
+
+- **Date**: 2026-07-27
+- **Surface**: whole repo (Dockerfile, `app/routes.py`, `scripts/check_migrations.py`, docs)
+- **Reported symptom**: none — every gate was green. An adversarial code review of the released
+  v0.2.0 tree confirmed 8 findings (1 critical, 2 major, 5 minor); 2 further claims were refuted
+  on evidence.
+- **Worst findings**: (1) `COPY . .` with no `.dockerignore` baked the developer's real `.env` —
+  a live OpenRouter key — and the full `.git` history into every locally built image;
+  `.gitignore` never protected the Docker build context, and CI escaped only because it copies
+  the placeholder `.env.example`. (2) `GET /api/v1/fit/{id}` skipped bearer auth entirely, so
+  stored fit reports with resume-derived claim statements were readable anonymously via
+  enumerable ids. (3) The extract/parse endpoints ran LLM network calls inside open DB
+  transactions with the OpenAI SDK's 600s default timeout — a slow model could pin the whole
+  connection pool — while the `LLM_TIMEOUT_SECONDS` knob in `.env.example` was read by nothing.
+- **Fix**: `.dockerignore`; auth on the read endpoint; read-close-call-write restructure plus a
+  bounded client (`LLM_TIMEOUT_SECONDS`/`LLM_MAX_RETRIES` now real); typed 503 for the keyless
+  openrouter embedder; `check_migrations.py` fails loud when `EXPECTED_TABLE_COUNT` is unset;
+  contracts.md enforcement made real (`tests/test_contracts.py`); README phase/quickstart truth
+  pass. Each behavior change carries a test that would have caught the original defect.
+- **Doctrine link**: Standard 5 (reported vs. actual, in writing) and the review habit itself —
+  green gates measure what they measure; an adversary reads what they do not.

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- `.dockerignore` added: `COPY . .` no longer bakes `.env` (a live OpenRouter key), `.git`
+  history, or local state into the image — `.gitignore` never protected the Docker build
+  context (adversarial review F1; FAIL-0004).
+- `GET /api/v1/fit/{id}` now requires the bearer token when `SMOKE_TEST_TOKEN` is set,
+  matching the mutation endpoints; stored fit reports (including resume-derived claim
+  statements) were readable anonymously via enumerable integer ids (F2).
+
+### Fixed
+- LLM calls in `claims/extract` and `requirements/parse` now run outside any DB
+  session/transaction (read, close, call, then write in a fresh session), and the gateway
+  client is bounded by `LLM_TIMEOUT_SECONDS` / `LLM_MAX_RETRIES` — previously the OpenAI SDK
+  defaults (600s timeout, 2 retries) could pin the connection pool from inside an open
+  transaction, and the `.env.example` timeout knob was read by nothing (F4).
+- `POST /api/v1/fit` with `embedder=openrouter` but no key/model set returns a typed 503
+  with actionable detail instead of an untyped 500 (F5).
+- `scripts/check_migrations.py` fails loud when `EXPECTED_TABLE_COUNT` is unset instead of
+  silently skipping the assertion while still printing `MIGRATION OK` (F7).
+- contracts.md's claimed CI enforcement now exists: `tests/test_contracts.py` checks every
+  implemented row against the served OpenAPI spec in both directions (F8).
+- README truth pass: the entailment gate is labeled Phase 2 in "What it is" (matching the
+  status banner and ROADMAP), and the quickstart starts and migrates Postgres — with the
+  `.env.example` smoke token — before promising `SMOKE OK` (F9, F10).
+
 ## [0.2.0] - 2026-07-23
 
 ### Added — Phase 1 honest analyzer
