@@ -8,13 +8,35 @@ quality slider here; it is a build failure, and the eval proves the gate actuall
 supporting properties keep the honest analyzer honest under real-world messiness — reworded JDs,
 different phrasings of the same evidence, and machine parsers on the far side of a render.
 
+## Phase 1 acceptance thresholds (written before the harness, 2026-07-23)
+
+Phase 1 ships the honest analyzer (extraction, JD parsing, matcher, Fit Report — no
+generation), so its bounds measure the analyzer. The suite is deterministic and keyless:
+golden synthetic fact graphs and labeled JDs with planted matches, planted disqualifying
+gaps, and pre-authored JD paraphrase sets; the deterministic HashingEmbedder keeps it
+byte-reproducible as a required CI check. `scripts/eval.py` exits nonzero on any miss.
+
+| Metric | Definition | Bound |
+|---|---|---|
+| Matcher accuracy | requirement rows scored matched/partial/gap agreeing with golden labels | >= 0.90 |
+| Verdict correctness | apply / do-not-apply agreeing with golden labels (incl. every planted disqualifying gap) | = 1.00 |
+| Transferable honesty | transferable evidence presented as a direct match | 0 violations |
+| Paraphrase invariance | verdict unchanged across each pre-authored JD paraphrase set | = 1.00 |
+| Match-set stability | Jaccard of matched-requirement sets across a paraphrase set | >= 0.85 |
+| Reproducibility | two consecutive `make eval` runs | identical reports |
+
+Extraction quality (LLM stage) is measured separately and key-gated — planted-fact recall on
+synthetic resumes through the real gateway, plus the Seismograph paraphrase-invariance
+contract in `contracts/` — reported when a key is present, never a required keyless check,
+and never silently skipped: the report states loudly when the key-gated section did not run.
+The gate-test, selection-stability, ATS, and human-preference bounds below join in Phase 2/3
+with the code they measure.
+
 ## Status
 
-`make eval` runs `scripts/eval.py`, which currently raises `NotImplementedError("eval harness lands
-in Phase 1")` **on purpose**. Per the AiGNITE doctrine, a harness that cannot yet measure must fail
-loud, never pass vacuously. The thresholds below are the acceptance targets the Phase-1 harness will
-enforce — goals, not achieved measurements. Each release will publish its eval report once the
-harness is wired.
+`scripts/eval.py` currently raises `NotImplementedError("eval harness lands in Phase 1")`
+**on purpose**; the real harness enforcing the table above lands in Phase 1 milestone M6
+(see LOOP_STATE.md), and the CI eval job becomes required in M9.
 
 ## How `make eval` will measure it
 
