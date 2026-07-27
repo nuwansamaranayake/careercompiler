@@ -13,4 +13,4 @@ case mixed: verdict=apply (expected apply), matched=['cost_optimization', 'kuber
 | paraphrase_invariance | 1.0 | >= 1.0 | PASS |
 | match_set_stability_min | 1.0 | >= 0.85 | PASS |
 
-key-gated extraction section: NOT RUN (no OPENROUTER_API_KEY); deterministic bounds above are the required gate
+key-gated extraction section: run scripts/eval_llm.py (not part of this deterministic report)

@@ -49,4 +49,9 @@ flywheel duty (a Seismograph contract ships with the LLM stage).
 (none)
 
 ## Next task
-Phase 1 gates: full gate + compose smoke + prod-guard, then GATES_PASSED and stop (release only on explicit go).
+NONE — Phase 1 GATES_PASSED (2026-07-23). All DONE-WHEN items observed: gate.py exit 0
+(ruff, 16 pytest, live business-loop smoke, eval all bounds 1.0), MIGRATION OK: 8 tables (host
+run and container self-migrate), prod-guard 503-fixture + fit-endpoint-200, containerized
+smoke SMOKE OK, flywheel contract validated + key-gated LLM eval recall 1.00 / jaccard 0.92.
+Branch `phase-1`, NOT pushed. Awaiting explicit `release CareerCompiler phase 1`; next cell
+after that is Mycelium Phase 1 (ledger order).
