@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.1] - 2026-07-23
 
+### Removed
+- Unused `sentence-transformers` dependency (and the CUDA torch stack it pulled). No Phase 1
+  code imports it; production images drop from ~5.7 GB toward the ~0.5 GB baseline
+  (FAILURES FAIL-0006).
+
 ### Security
 - `.dockerignore` added: `COPY . .` no longer bakes `.env` (a live OpenRouter key), `.git`
   history, or local state into the image — `.gitignore` never protected the Docker build
