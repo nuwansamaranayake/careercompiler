@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-23
+
 ### Security
 - `.dockerignore` added: `COPY . .` no longer bakes `.env` (a live OpenRouter key), `.git`
   history, or local state into the image — `.gitignore` never protected the Docker build
