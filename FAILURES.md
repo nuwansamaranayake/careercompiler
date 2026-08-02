@@ -158,3 +158,23 @@ the *diagnosed* root cause separately (Standard 5).
 - **Doctrine link**: rule 9, sweep the class not the instance. Also rule 10: the hostname
   enumeration fails loudly when it finds no hostnames, rather than passing over an empty set.
 
+
+## FAIL-0008 — The local test image measured an environment that did not exist
+
+- **Date**: 2026-08-02, found during the Phase 2 build.
+- **Observed**: `careercompiler-service:latest` on the build workstation was **5.8 GB and
+  carried `torch 2.13.0+cu130`** — a stale image predating the `e83080f` cleanup — while
+  production ran clean at 608 MB with no torch at all. The Phase 2 selector and gate suites
+  were first run inside that stale image, so early green results measured a dependency
+  environment that existed nowhere but this machine.
+- **Class**: the test environment diverges from the system under test. Third instance in
+  this estate, after the noiseless golden fixtures that produced vacuous eval passes
+  (Almanac 130/130/130, Parallax drift 0.0000) and the sqlite retention tests that passed
+  while the real foreign-key graph left 11 rows behind (portfolio-ops FAIL-0004).
+- **Remediation**: rebuilt from the current Dockerfile (610 MB, matching production), rebuilt
+  the test image `FROM` that, and re-ran the full suite on it — 57 tests pass on the
+  production-shaped environment. `LOOP_STATE.md` now instructs every session to rebuild the
+  test image from the Dockerfile rather than trust whatever `:latest` is lying around, and
+  `DECISIONS.md` 003 records the stale-image warning.
+- **Rule this reinforces**: a local image is not evidence about production. Evidence comes
+  from the artifact the Dockerfile builds today, or from production itself.

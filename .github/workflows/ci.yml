@@ -43,6 +43,8 @@ jobs:
         run: cp .env.example .env
       - name: Bring up the stack
         run: docker compose up -d --build
+      - name: Assert image size (fires at 1.9 GB, ceiling is 2.0 — DECISIONS.md 003)
+        run: python scripts/assert_image_size.py careercompiler-service
       - name: Wait for health
         run: |
           for i in $(seq 1 30); do

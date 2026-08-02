@@ -23,7 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   torch reports `2.13.0+cpu` and `torch.version.cuda is None`, asserted during the build.
   `torch/test` (83 MB) and `torch/include` (62 MB) are removed after install: build-time
   artifacts with no runtime use. A first attempt without that pruning measured **1.99 GB** —
-  a 10 MB margin, which is a coin flip rather than a margin.
+  a near-miss inside measurement noise, not a pass. CI now asserts the size at **1.9 GB**
+  (`scripts/assert_image_size.py`, run against the compose-built image on every push), so
+  the next torch or transformers bump that creeps past the line gets a red CI run and a
+  pointer to what is prunable, instead of discovering the 2.0 GB wall during a deploy.
 - **The gate discriminates on real weights**, verified with `--network none` to prove the
   checkpoint is baked and never fetched at request time. Against the cited fact "Led a team of
   4 engineers at Acme Corp from 2019 to 2022":

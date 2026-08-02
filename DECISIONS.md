@@ -60,9 +60,9 @@ per-run token cost.
 **Measured against production before acting**, per the audit-first rule:
 
 ```
-POST /candidates/{cid}/claims/extract   201  {"stored":22,"rejected_span_anchor":0}   8.0s
-POST /jobs/{jid}/requirements/parse     201  {"parsed":4}                             1.0s
-POST /fit                               201  {"verdict":"apply","matched":3,...}      0.1s
+POST /api/v1/candidates/{cid}/claims/extract   201  {"stored":22,"rejected_span_anchor":0}  8.0s
+POST /api/v1/jobs/{jid}/requirements/parse     201  {"parsed":4}                            1.0s
+POST /api/v1/fit                               201  {"verdict":"apply","matched":3,...}     0.1s
 ```
 
 `OPENROUTER_API_KEY` is configured and the LLM path works. The 503 exists in `routes.py:41`
