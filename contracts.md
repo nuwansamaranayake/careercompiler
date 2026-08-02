@@ -29,4 +29,5 @@ every planned row is not yet served.
 | Read a compiled document + provenance map | GET | `/api/v1/compile/{did}` | implemented | Bullets with cited fact ids resolved to statements, entailment scores, and every omission with its typed reason. |
 | Download the compiled docx | GET | `/api/v1/compile/{did}/docx` | implemented | python-docx output with a provenance appendix; every sentence traces to a fact. |
 | Live-check an edited bullet (the rejection moment) | POST | `/api/v1/compile/check` | implemented | Runs linker + entailment on one edited sentence against its cited facts; returns violations, never persists. The E2 centerpiece. |
-| Open a demo session | POST | `/api/v1/demo/session` | planned — Phase 2 | Issues a scoped, short-lived, rate-limited bearer token bound to a demo tenant. Business reads stay bearer-authenticated. |
+| Upload a resume file (PDF/docx) | POST | `/api/v1/candidates/upload` | implemented | Multipart; text extracted server-side, stored as the source document for span-anchored extraction. 415 on other formats, 422 when no text is extractable. |
+| Open a demo session | POST | `/api/v1/demo/session` | implemented | Issues a scoped, short-lived, rate-limited bearer token bound to a demo tenant. Business reads stay bearer-authenticated. |

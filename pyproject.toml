@@ -22,6 +22,7 @@ dependencies = [
     "httpx",
     "aignite-groundwork @ git+https://github.com/nuwansamaranayake/groundwork@v0.1.1",
     "python-docx",
+    "python-multipart",
     "pypdf",
     "ortools",
     "boto3",

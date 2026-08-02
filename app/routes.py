@@ -14,12 +14,17 @@ two (Standard 3). Bearer auth on mutations and fit-report reads when SMOKE_TEST_
 """
 from __future__ import annotations
 
+import io
+
 import sqlalchemy as sa
-from fastapi import APIRouter, Header, HTTPException, Response
+from docx import Document as DocxDocument
+from fastapi import (APIRouter, File, Form, Header, HTTPException, Request, Response,
+                     UploadFile)
+from pypdf import PdfReader
 from groundwork import BaseConfig, LLMGateway
 from pydantic import BaseModel, Field
 
-from . import db
+from . import db, demo
 from .config import settings
 from .engine import entailment, linker
 from .engine.docx_out import render_docx
@@ -36,10 +41,43 @@ from .engine.selector import Omission, OmissionReason, select
 router = APIRouter(prefix="/api/v1")
 
 
-def _auth(authorization: str | None) -> None:
+def _auth(authorization: str | None) -> str | None:
+    """Full access for the estate token, a tenant prefix for a live demo token, 401 else.
+
+    The demo changes who can hold a bearer, never whether one is required: with no token
+    at all the answer stays 401, so the estate invariant (zero unauthenticated business
+    reads) survives the demo unchanged.
+    """
     token = settings.smoke_test_token
-    if token and authorization != f"Bearer {token}":
+    raw = authorization or ""
+    raw = raw[7:] if raw.startswith("Bearer ") else ""
+    if token and raw == token:
+        return None
+    if raw:
+        scope = demo.check_session(raw)
+        if scope:
+            return scope
+    if token:
         raise HTTPException(status_code=401, detail="missing or invalid bearer token")
+    return None
+
+
+def _guard(s, scope: str | None, *, candidate_id=None, job_id=None) -> None:
+    """Tenancy: a demo token touches only rows whose root identifier carries its prefix."""
+    if scope is None:
+        return
+    denied = HTTPException(status_code=403,
+                           detail="this demo session cannot access that resource")
+    if candidate_id is not None:
+        row = s.execute(sa.select(db.candidates.c.name)
+                        .where(db.candidates.c.id == candidate_id)).first()
+        if row is None or not row.name.startswith(scope):
+            raise denied
+    if job_id is not None:
+        row = s.execute(sa.select(db.job_postings.c.title)
+                        .where(db.job_postings.c.id == job_id)).first()
+        if row is None or not row.title.startswith(scope):
+            raise denied
 
 
 def _gateway() -> LLMGateway:
@@ -127,9 +165,10 @@ class FitIn(BaseModel):
 
 @router.post("/candidates", status_code=201)
 def create_candidate(body: CandidateIn, authorization: str | None = Header(default=None)):
-    _auth(authorization)
+    scope = _auth(authorization)
     with db.get_session() as s, s.begin():
-        cid = s.execute(db.candidates.insert().values(name=body.name)).inserted_primary_key[0]
+        cid = s.execute(db.candidates.insert().values(
+            name=f"{scope or ''}{body.name}")).inserted_primary_key[0]
         if body.resume_text:
             s.execute(db.source_documents.insert().values(
                 candidate_id=cid, name="resume.txt", text=body.resume_text))
@@ -138,7 +177,7 @@ def create_candidate(body: CandidateIn, authorization: str | None = Header(defau
 
 @router.post("/candidates/{cid}/claims", status_code=201)
 def add_claims(cid: int, body: ClaimsIn, authorization: str | None = Header(default=None)):
-    _auth(authorization)
+    scope = _auth(authorization)
     try:
         claims = claims_from_entries(body.entries)
     except Exception as e:
@@ -147,23 +186,26 @@ def add_claims(cid: int, body: ClaimsIn, authorization: str | None = Header(defa
         if not s.execute(sa.select(db.candidates.c.id)
                          .where(db.candidates.c.id == cid)).first():
             raise HTTPException(status_code=404, detail="candidate not found")
+        _guard(s, scope, candidate_id=cid)
         n = _store_claims(s, cid, claims)
     return {"stored": n, "provenance": "self_attested"}
 
 
 @router.post("/candidates/{cid}/claims/extract", status_code=201)
 def extract_claims(cid: int, authorization: str | None = Header(default=None)):
-    _auth(authorization)
-    gateway = _gateway()
+    scope = _auth(authorization)
+    # Tenancy before the key gate: a 403 must not depend on whether a key is configured
     # Load inputs and close the session BEFORE the network call: a slow model must never
     # hold a DB connection or transaction open. Results are written in a second session.
     with db.get_session() as s:
+        _guard(s, scope, candidate_id=cid)
         doc = s.execute(sa.select(db.source_documents)
                         .where(db.source_documents.c.candidate_id == cid)
                         .order_by(db.source_documents.c.id.desc())).first()
     if doc is None:
         raise HTTPException(status_code=422,
                             detail="candidate has no resume document to extract from")
+    gateway = _gateway()
     claims = extract_facts(gateway, settings.llm_model_extraction, doc.text, doc.name)
     with db.get_session() as s, s.begin():
         n = _store_claims(s, cid, claims)
@@ -173,7 +215,7 @@ def extract_claims(cid: int, authorization: str | None = Header(default=None)):
 
 @router.post("/jobs", status_code=201)
 def create_job(body: JobIn, authorization: str | None = Header(default=None)):
-    _auth(authorization)
+    scope = _auth(authorization)
     reqs: list[Requirement] = []
     if body.requirements:
         try:
@@ -182,7 +224,8 @@ def create_job(body: JobIn, authorization: str | None = Header(default=None)):
             raise HTTPException(status_code=422, detail=str(e))
     with db.get_session() as s, s.begin():
         jid = s.execute(db.job_postings.insert().values(
-            title=body.title, description=body.description)).inserted_primary_key[0]
+            title=f"{scope or ''}{body.title}",
+            description=body.description)).inserted_primary_key[0]
         for r in reqs:
             s.execute(db.requirements.insert().values(job_id=jid, **r.model_dump()))
     return {"job_id": jid, "requirements": len(reqs)}
@@ -190,16 +233,18 @@ def create_job(body: JobIn, authorization: str | None = Header(default=None)):
 
 @router.post("/jobs/{jid}/requirements/parse", status_code=201)
 def parse_requirements(jid: int, authorization: str | None = Header(default=None)):
-    _auth(authorization)
-    gateway = _gateway()
+    scope = _auth(authorization)
     # Same discipline as extract_claims: read, close the session, call the LLM, then write.
+    # Tenancy runs before the key gate.
     with db.get_session() as s:
+        _guard(s, scope, job_id=jid)
         job = s.execute(sa.select(db.job_postings)
                         .where(db.job_postings.c.id == jid)).first()
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
     if not job.description:
         raise HTTPException(status_code=422, detail="job has no description to parse")
+    gateway = _gateway()
     reqs = parse_jd(gateway, settings.llm_model_extraction, job.description)
     with db.get_session() as s, s.begin():
         for r in reqs:
@@ -209,9 +254,10 @@ def parse_requirements(jid: int, authorization: str | None = Header(default=None
 
 @router.post("/fit", status_code=201)
 def run_fit(body: FitIn, authorization: str | None = Header(default=None)):
-    _auth(authorization)
+    scope = _auth(authorization)
     embedder = _embedder(body.embedder)
     with db.get_session() as s, s.begin():
+        _guard(s, scope, candidate_id=body.candidate_id, job_id=body.job_id)
         claims = _load_claims(s, body.candidate_id)
         if not claims:
             raise HTTPException(status_code=422, detail="candidate has no claims")
@@ -240,12 +286,13 @@ def run_fit(body: FitIn, authorization: str | None = Header(default=None)):
 
 @router.get("/fit/{rid}")
 def get_fit(rid: int, authorization: str | None = Header(default=None)):
-    _auth(authorization)
+    scope = _auth(authorization)
     with db.get_session() as s:
         rep = s.execute(sa.select(db.fit_reports)
                         .where(db.fit_reports.c.id == rid)).mappings().first()
         if rep is None:
             raise HTTPException(status_code=404, detail="fit report not found")
+        _guard(s, scope, candidate_id=rep["candidate_id"])
         rows = s.execute(sa.select(db.match_scores)
                          .where(db.match_scores.c.fit_report_id == rid)).mappings().all()
     return {"report": dict(rep), "rows": [dict(r) for r in rows]}
@@ -274,12 +321,13 @@ def verify_fact(claim_id: str, body: VerifyIn,
                 authorization: str | None = Header(default=None)):
     """Humans approve. This is the only way a claim's verification state changes after
     extraction — the model never does this."""
-    _auth(authorization)
+    scope = _auth(authorization)
     with db.get_session() as s, s.begin():
-        row = s.execute(sa.select(db.atomic_claims.c.id)
+        row = s.execute(sa.select(db.atomic_claims.c.id, db.atomic_claims.c.candidate_id)
                         .where(db.atomic_claims.c.claim_id == claim_id)).first()
         if row is None:
             raise HTTPException(status_code=404, detail="fact not found")
+        _guard(s, scope, candidate_id=row.candidate_id)
         s.execute(db.atomic_claims.update()
                   .where(db.atomic_claims.c.claim_id == claim_id)
                   .values(verification_status=body.status))
@@ -307,11 +355,12 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
     Only a document that passed both gates is persisted: every stored row traced every
     sentence to a fact at the moment it was written.
     """
-    _auth(authorization)
-    gateway = _gateway()
+    scope = _auth(authorization)
 
     # Read everything, close the session, then call the model (same discipline as extract).
+    # Tenancy runs before the key gate: 403 must not depend on key presence.
     with db.get_session() as s:
+        _guard(s, scope, candidate_id=body.candidate_id, job_id=body.job_id)
         claims = _load_claims(s, body.candidate_id)
         if not claims:
             raise HTTPException(status_code=422, detail="candidate has no claims")
@@ -323,6 +372,7 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
         if not reqs:
             raise HTTPException(status_code=422, detail="job has no requirements")
 
+    gateway = _gateway()
     rows = match(reqs, claims, _embedder(body.embedder))
     budget = body.budget_lines or settings.compile_budget_lines
     sel = select(claims, reqs, rows, budget)
@@ -404,9 +454,10 @@ def _load_document(s, did: int):
 def get_compiled(did: int, authorization: str | None = Header(default=None)):
     """The provenance map: every bullet with its cited facts resolved to statements, and
     every omission with its typed reason."""
-    _auth(authorization)
+    scope = _auth(authorization)
     with db.get_session() as s:
         doc, bullets, omissions = _load_document(s, did)
+        _guard(s, scope, candidate_id=doc["candidate_id"])
         claims = {c.core.claim_id: c for c in _load_claims(s, doc["candidate_id"])}
     return {"document": dict(doc),
             "bullets": [{**dict(b), "facts": [
@@ -420,9 +471,10 @@ def get_compiled(did: int, authorization: str | None = Header(default=None)):
 
 @router.get("/compile/{did}/docx")
 def get_compiled_docx(did: int, authorization: str | None = Header(default=None)):
-    _auth(authorization)
+    scope = _auth(authorization)
     with db.get_session() as s:
         doc, bullets, omissions = _load_document(s, did)
+        _guard(s, scope, candidate_id=doc["candidate_id"])
         claims = {c.core.claim_id: c for c in _load_claims(s, doc["candidate_id"])}
         cand = s.execute(sa.select(db.candidates.c.name)
                          .where(db.candidates.c.id == doc["candidate_id"])).first()
@@ -451,9 +503,10 @@ def check_bullet(body: CheckIn, authorization: str | None = Header(default=None)
     """The rejection moment, live. Runs both gates on one edited sentence against its cited
     facts and returns the verdict with evidence. Persists nothing, always 200: the outcome
     of a check is a result, not an error."""
-    _auth(authorization)
+    scope = _auth(authorization)
     with db.get_session() as s:
         doc, _, _ = _load_document(s, body.document_id)
+        _guard(s, scope, candidate_id=doc["candidate_id"])
         claims = _load_claims(s, doc["candidate_id"])
 
     bullet = Bullet(text=body.text, cites=body.cites)
@@ -479,3 +532,61 @@ def check_bullet(body: CheckIn, authorization: str | None = Header(default=None)
     return {"ok": link.ok and bool(entail.get("ok", False)),
             "reference_integrity": {"ok": link.ok, "violations": link_violations},
             "entailment": entail}
+
+
+# --------------------------------------------------------------------------- demo (Part B)
+@router.post("/demo/session", status_code=201)
+def open_demo_session(request: Request):
+    """Public by design: this endpoint ISSUES credentials, it does not bypass them.
+
+    Rate-limited per source address, and the token it returns is scoped (tenant prefix),
+    budgeted (request counter), and short-lived (Redis TTL). Seeding is entry-path only,
+    so a session opens without an LLM call and costs nothing per visitor.
+    """
+    forwarded = request.headers.get("x-forwarded-for") or ""
+    ip = (forwarded.split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    token, prefix = demo.create_session(ip)
+    with db.get_session() as s, s.begin():
+        seeded = demo.seed_tenant(s, prefix, _store_claims)
+    return {"token": token, "token_type": "bearer",
+            "expires_in": settings.demo_session_ttl_seconds,
+            "request_budget": settings.demo_request_budget,
+            "synthetic": True, **seeded}
+
+
+@router.post("/candidates/upload", status_code=201)
+async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
+                           authorization: str | None = Header(default=None)):
+    """Resume upload, PDF or docx (E5). Text is extracted server-side and stored as the
+    source document; span anchoring during claim extraction then works against exactly
+    this text, and a quote that fails to anchor is stored rejected and never matches."""
+    scope = _auth(authorization)
+    data = await file.read()
+    if len(data) > 2_000_000:
+        raise HTTPException(status_code=413, detail="file exceeds the 2 MB upload limit")
+    fn = (file.filename or "").lower()
+    try:
+        if fn.endswith(".pdf"):
+            text = "\n".join((p.extract_text() or "")
+                             for p in PdfReader(io.BytesIO(data)).pages)
+        elif fn.endswith(".docx"):
+            text = "\n".join(p.text for p in DocxDocument(io.BytesIO(data)).paragraphs)
+        else:
+            raise HTTPException(status_code=415,
+                                detail="PDF or docx only; paste-in text is not accepted")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=422,
+                            detail="the file could not be parsed as PDF or docx")
+    if not text.strip():
+        raise HTTPException(status_code=422,
+                            detail="no extractable text in the document; a scanned image "
+                                   "needs OCR, which this demo does not run")
+    with db.get_session() as s, s.begin():
+        cid = s.execute(db.candidates.insert().values(
+            name=f"{scope or ''}{name}")).inserted_primary_key[0]
+        s.execute(db.source_documents.insert().values(
+            candidate_id=cid, name=fn, text=text))
+    return {"candidate_id": cid, "chars": len(text)}

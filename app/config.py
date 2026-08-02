@@ -37,5 +37,11 @@ class AppConfig(BaseConfig):
     # Compile defaults. ~28 rendered lines approximates one printed page of bullets.
     compile_budget_lines: int = 28
 
+    # Demo sessions (Part B): scoped, short-lived, budgeted. The budget is a counter, not
+    # a clock; the TTL is enforced by Redis key expiry.
+    demo_session_ttl_seconds: int = 1800
+    demo_request_budget: int = 60
+    demo_sessions_per_ip_hour: int = 10
+
 
 settings = AppConfig()

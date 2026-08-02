@@ -1,0 +1,25 @@
+# Part 0.2 host audit before CareerCompiler NLI deploy. 2026-08-02T23:16:01Z
+               total        used        free      shared  buff/cache   available
+Mem:           15992        7349         305        1200        9876        8643
+Swap:              0           0           0
+
+regpulse-minio-1                2.604GiB / 15.62GiB   11.97%
+regpulse-backend-1              791.1MiB / 15.62GiB   0.93%
+floodpulse-scheduler            651.8MiB / 15.62GiB   0.00%
+floodpulse-db                   635.1MiB / 2GiB       0.00%
+recallwatch-backend             580.3MiB / 1GiB       1.01%
+airshield-db-1                  361.5MiB / 15.62GiB   0.00%
+airshield-backend-1             349.8MiB / 15.62GiB   0.65%
+beacon-gom-backend-1            237.1MiB / 15.62GiB   0.21%
+regpulse-db-1                   222.9MiB / 15.62GiB   0.00%
+recallwatch-db                  196.1MiB / 2GiB       0.00%
+drapestudio-api-1               194.4MiB / 15.62GiB   0.63%
+careercompiler-service-1        110MiB / 768MiB       0.16%
+floodpulse-backend              106.8MiB / 15.62GiB   0.23%
+mycelium-service-1              87.08MiB / 768MiB     0.17%
+triage-service-1                84.46MiB / 768MiB     0.72%
+beacon-gom-mcp-server-1         83.97MiB / 15.62GiB   0.26%
+mycelium-minio-1                82.89MiB / 384MiB     0.10%
+almanac-service-1               82MiB / 768MiB        0.15%
+parallax-service-1              80.99MiB / 768MiB     0.16%
+seismograph-service-1           80.66MiB / 768MiB     0.17%
