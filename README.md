@@ -1,14 +1,19 @@
 # CareerCompiler
 
-> **Status: Phase 1 honest analyzer released (v0.2.3).** Span-anchored fact
-> extraction, JD parsing, the deterministic matcher, and the Fit Report with its honest
-> do-not-apply verdict are real, tested, and eval-gated. Generation (and with it the claim
-> linker and NLI gate) is Phase 2, as designed: the analyzer ships first.
-> [ROADMAP.md](ROADMAP.md) shows what exists today versus what is next.
+**Live demo: <https://careercompiler.aigniteconsulting.ai>** — open it, start a demo
+session (no sign-up), overstate a bullet, and watch the compile fail with the cited
+evidence beside it.
+
+> **Status: Phase 2 compiler deployed (v0.3.0).** The Phase 1 honest analyzer
+> (span-anchored extraction, deterministic matcher, do-not-apply verdicts) plus the
+> generation half: a knapsack content selector with typed omission reasons, an LLM renderer
+> that phrases but never chooses content or computes a number, a deterministic
+> reference-integrity linker, and an NLI entailment gate pinned by revision digest.
+> [ROADMAP.md](ROADMAP.md) shows what exists versus what is next.
 
 **A compiler, not a ghostwriter.** Your verified career facts are the source code, the job
 description is the target platform, and the resume is a compiled artifact in which every sentence
-links back to evidence. Fabrication is not discouraged. It is structurally impossible.
+links back to evidence. A sentence that cites nothing, cites a fact that does not exist, or carries a number found in no cited fact fails the build deterministically; a sentence that claims more than its cited evidence supports is rejected by an entailment model whose threshold (0.7) sits between a measured 0.9976 for a faithful sentence and 0.0015 for an inflated one — and is not yet calibrated between those extremes. The compile error is the product.
 
 ## What it is
 

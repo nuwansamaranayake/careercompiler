@@ -105,3 +105,22 @@ Beacon GoM's paying users.
 on this workstation was 5.8 GB and contained `torch 2.13.0+cu130` — it predated the cleanup
 commit `e83080f`. Production was already clean at 608 MB. A local image is not evidence about
 production; rebuild before drawing conclusions from one.
+
+---
+
+## DECISION 004 — tailoring is evidence selection; the renderer never sees the job
+
+**Date:** 2026-08-03
+**Status:** adopted, stated on the public page rather than hidden
+
+**The live failure that produced it (2026-08-02):** the renderer's prompt originally said
+"aim each bullet at the requirements it helps satisfy." On real drafts that instruction
+produced gloss the facts did not entail — "demonstrating team leadership", "track record
+of technical leadership" — which the entailment gate rejected at ~0.00. The steering was
+the cause: asked to aim at requirements, the model reached beyond the evidence.
+
+**Decision:** the job's requirements are deliberately absent from the renderer's payload.
+Selection (which facts make the page, under the budget) is where tailoring happens, and it
+is deterministic. The renderer restates the chosen facts faithfully; wording does not
+shift per job. A reviewer who expects per-job rephrasing must not be surprised, so the
+demo page says this in plain text (E8). The honest version of "tailored" is "selected."

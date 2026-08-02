@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-03
+
+Public surface: demo sessions and the frontend. Minor bump.
+
+### Added
+- **Demo access (Part B).** `POST /api/v1/demo/session` issues a scoped, budgeted,
+  expiring bearer bound to a `demo-<stamp>Z-<hex>-` tenant. Cross-tenant 403, budget 429,
+  expiry 401 — each proven by a test. Seeded synthetic tenant shows both verdicts,
+  including the planted do-not-apply. Estate invariant unchanged: no token is 401
+  everywhere.
+- **The frontend (Part E).** Next.js static export served by FastAPI from the same
+  container (no node runtime in production). Landing with the EVAL.md limits block
+  verbatim; the demo page with fit verdicts, compile, provenance per bullet, docx
+  download, PDF/docx upload, and the rejection moment: challenge a bullet, overstate it,
+  watch the gate reject it with the cited facts beside it. Verified in a real browser:
+  linker rejection (invented number), entailment rejection at 0.0007, faithful pass at
+  0.9951.
+- **`POST /api/v1/candidates/upload`**: PDF/docx multipart; text extracted server-side;
+  span anchoring works against exactly that text.
+
+### Measured
+- Image size **1.87 GB** with the frontend baked (assertion fires at 1.9, ceiling 2.0).
+- Container RSS with NLI weights resident: **530 MiB** after a real compile;
+  production limit set to 1500m / 2 cpus and verified under load at deploy.
+- Entailment on real weights in the browser: faithful 0.9951, inflated verb 0.0007,
+  threshold 0.7 (uncalibrated between extremes — published on the page).
+
+### Fixed
+- Extract, parse and compile ran the key gate before the tenancy guard, answering 503
+  where a cross-tenant request deserved 403. Guards now run first.
+
 ### Added
 - **Knapsack content selector** (`app/engine/selector.py`). CP-SAT maximizes requirement
   coverage, evidence strength, recency and quantified impact under a hard line budget.
