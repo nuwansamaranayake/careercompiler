@@ -1,0 +1,18 @@
+# Local browser walkthrough of the demo path, 2026-08-03. Real stack (compose), real LLM,
+# real NLI weights, driven in a real browser (not curl). Production walkthrough follows
+# deploy as the G6 evidence; this file proves the path before it ships.
+
+1. /demo -> "Start the demo" -> session opened, no credentials.
+2. Seeded verdicts rendered: Platform Engineer = apply; Site Reliability Lead, Defense
+   Systems = do not apply, with "The case against applying" naming the clearance gap.
+3. "Compile this resume" -> compiled page, 5 bullets, each with an entailment chip.
+4. THE REJECTION MOMENT (E2), three states observed on screen:
+   a. Overstate preset (6 years -> 60): "Compile error. The sentence outran its evidence.
+      unsupported_number: the number '60' appears in no cited fact; the model computed or
+      invented it" — cited fact shown beside it.
+   b. Verb inflation ("Directed the entire engineering organisation across every product
+      line."): "entailment 0.0007 against the 0.7 threshold ... the sentence claims more
+      than the fact does" — evidence shown beside it.
+   c. Faithful restatement: "Compiles. The evidence supports this sentence at 0.9951
+      against the 0.7 threshold."
+5. Landing and demo both serve the EVAL.md limits block verbatim (grep-verified).

@@ -13,7 +13,7 @@ different phrasings of the same evidence, and machine parsers on the far side of
 This sentence is what the root page publishes, verbatim. The gate fails if the page and this block drift apart.
 
 <!-- LIMITS -->
-On a golden suite of 4 labelled job cases against a 6-fact synthetic career graph, the analyzer places every requirement in the right bucket (matcher accuracy 1.0), returns the correct apply or do-not-apply verdict on every case including planted disqualifying gaps (1.0), never presents transferable evidence as direct (0 violations), and holds its verdict across pre-authored paraphrases of the job description (1.0); the suite is synthetic and small, so it does not measure performance on real resumes or real postings.
+On a golden suite of 4 labelled job cases against a 6-fact synthetic career graph, the analyzer places every requirement in the right bucket (matcher accuracy 1.0), returns the correct apply or do-not-apply verdict on every case including planted disqualifying gaps (1.0), never presents transferable evidence as direct (0 violations), and holds its verdict across pre-authored paraphrases of the job description (1.0); the suite is synthetic and small, so it does not measure performance on real resumes or real postings. The Phase 2 compiler rejects a sentence that claims more than its cited evidence supports: on the pinned entailment model a faithful sentence scored 0.9976 and an inflated verb 0.0015, but the 0.7 threshold is not yet calibrated between those extremes, so a borderline honest paraphrase can be rejected; compile-time rejection is measured, fabrication recall in the wild is not.
 <!-- /LIMITS -->
 
 

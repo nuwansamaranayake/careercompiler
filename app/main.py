@@ -1,5 +1,9 @@
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from groundwork import Env
 from .config import settings
 from .fixtures import load_synthetic_fixture
@@ -25,8 +29,26 @@ def demo():
         raise HTTPException(status_code=500, detail="synthetic fixture is empty")
     return {"items": items}
 
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
-def root() -> HTMLResponse:
-    """The front door. Public by design: a browser must get a page, not a 404."""
-    return HTMLResponse(content=render_front_page(),
-                        media_type="text/html; charset=utf-8")
+# The front door. Public by design: a browser must get a page, not a 404. When the built
+# frontend is present (the image bakes it at /srv/web) it IS the front door; without it —
+# a source checkout, the test suite — the legacy single-file page serves. Both carry the
+# EVAL.md limits block verbatim, and the deploy gate asserts that against whatever is live.
+_WEB = Path(os.getenv("WEB_DIR", "/srv/web"))
+
+if (_WEB / "index.html").exists():
+    app.mount("/_next", StaticFiles(directory=_WEB / "_next"), name="next-assets")
+
+    @app.get("/", include_in_schema=False)
+    def root() -> FileResponse:
+        return FileResponse(_WEB / "index.html", media_type="text/html; charset=utf-8")
+
+    @app.get("/demo", include_in_schema=False)
+    @app.get("/demo/", include_in_schema=False)
+    def demo_page() -> FileResponse:
+        return FileResponse(_WEB / "demo" / "index.html",
+                            media_type="text/html; charset=utf-8")
+else:
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def root() -> HTMLResponse:
+        return HTMLResponse(content=render_front_page(),
+                            media_type="text/html; charset=utf-8")
