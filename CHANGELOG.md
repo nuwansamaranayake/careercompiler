@@ -37,8 +37,10 @@ Public surface: demo sessions and the frontend. Minor bump.
 ### Fixed
 - Extract, parse and compile ran the key gate before the tenancy guard, answering 503
   where a cross-tenant request deserved 403. Guards now run first.
+- The served `openapi.json` announced FastAPI's default `0.1.0` while the front page showed
+  the deployed tag. Both now read `frontpage.build_version()`.
 
-### Added
+### Added — the engine underneath (built 2026-08-02, first released here)
 - **Knapsack content selector** (`app/engine/selector.py`). CP-SAT maximizes requirement
   coverage, evidence strength, recency and quantified impact under a hard line budget.
   Every omitted fact carries one of four typed reasons, because a fact nobody asked for is a
@@ -49,7 +51,7 @@ Public surface: demo sessions and the frontend. Minor bump.
 - **NLI entailment gate** (`app/engine/entailment.py`). Pinned by revision digest. No fallback
   path: model unavailable raises `EntailmentUnavailable` and the build fails.
 
-### Measured
+### Measured — engine
 - **Image size: 1.86 GB**, against the 2.00 GB ceiling. Baseline without the gate is 610 MB.
   torch reports `2.13.0+cpu` and `torch.version.cuda is None`, asserted during the build.
   `torch/test` (83 MB) and `torch/include` (62 MB) are removed after install: build-time
@@ -71,10 +73,6 @@ Public surface: demo sessions and the frontend. Minor bump.
 - **The LLM path works in production** (2026-08-02): extraction 22 claims in 8.0s with 0
   rejected span anchors, JD parse 4 requirements in 1.0s, fit `verdict=apply`. The brief's
   premise that a reviewer meets a 503 does not hold.
-
-### Fixed
-- The served `openapi.json` announced FastAPI's default `0.1.0` while the front page showed
-  the deployed tag. Both now read `frontpage.build_version()`.
 
 
 ## [0.2.3] - 2026-07-27
