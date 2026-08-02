@@ -47,34 +47,51 @@ the git history of this file; its design decisions that still bind are carried f
 
 | Task | Status | Evidence |
 |---|---|---|
-| A1 single version source | **done** | commit `841ff52`; two tests, incl. one proving the helper reads `APP_VERSION` |
-| A2 record measured truth | **done** | `DECISIONS.md` 002. Premise did not hold; no escalation |
-| A3 contracts vs live schema | todo | routes for B/D/F still to be added to `contracts.md` **before** their code |
-| B1–B5 demo access | todo | |
-| C1–C4 selector | **C1–C3 done** | commit `3b0dac3`; 10 tests, mutation-checked. **C4 (paraphrase Jaccard ≥ 0.85) not written** |
-| D2 linker | **done** | commit `82effa4` |
-| D3/D5 entailment gate | **done** | commit `82effa4`; pinned digest, no fallback, 3 tests hold that line |
-| D4 torch discipline | **done** | commit `74b05b6`; **1.86 GB** measured, `--network none` load verified |
-| D6/D7 planted violations, red team | **done** | commit `82effa4`; 19 tests |
-| D1 renderer | **todo** | the LLM drafting step. Gates exist and are proven; nothing calls them yet |
-| D8 docx + provenance map | todo | |
-| E1–E7 frontend | todo | not started |
-| F1 ATS parse-back | todo | |
-| G1–G6 prove it | todo | |
-| H1–H6 release and deploy | **todo — nothing pushed, nothing deployed** | |
+| A1 version source | done | `841ff52` |
+| A2 measured truth | done | DECISIONS 002 |
+| A3 contracts from served schema | **done** | `142db1d`; literal enforcement + planned-not-served test |
+| Review corrections (paths/1.9GB/FAIL-0008) | **done** | `142db1d` |
+| C1–C3 selector | done | `3b0dac3`, mutation-checked |
+| D1 renderer | **done** | `60de159`; per-fact form, code assigns citations |
+| D2–D7 gates | done | `82effa4`; D4 1.86 GB `74b05b6` |
+| D8 docx + provenance | **done** | `60de159`; provenance ships inside the docx |
+| Local E2E real weights | **done** | `evidence/2026-08-02-local-e2e.txt`, 2 consecutive 11/11 runs |
+| C4 paraphrase Jaccard ≥0.85 | todo | eval script extension |
+| B1–B5 demo access | todo | contracts row planned; design in plan file |
+| E1–E7 frontend | todo | `web/` not started; invoke agent-legibility-truth-layer first |
+| E7 cost per compile | todo | measure via OpenRouter usage on one compile |
+| F1 ATS parse-back | todo | cut F2–F4 first if short |
+| G1–G6 estate proof | todo | extend portfolio-ops estate_smoke careercompiler loop |
+| H release+deploy | todo | **nothing pushed, nothing deployed** |
+
+## Renderer design decisions (do not regress; each earned by a live failure)
+
+1. Model speaks aliases F1..Fn, never 16-hex ids (models mangle hex → unknown_fact_id).
+2. Output is a per-fact FORM ({id, text}); code assigns citations (models shuffle assembled
+   cites → true sentences at ~0.00 entailment against the wrong premise).
+3. Charter is faithful restatement ONLY; requirements deliberately absent from the payload
+   (requirement-steering produced gloss like "demonstrating leadership" → gate rejects).
+
+## Deploy checklist additions (proven locally, will bite in production)
+
+- The production env file on beacon-gom sets `NLI_MODEL=cross-encoder/nli-deberta-v3-base`
+  with NO revision. env_file overrides image ENV → mixed config → gate 503s. At deploy, set
+  the pinned pair (MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli @ 6f5cf0a2b59cab...) in the
+  prod env or delete both lines so image ENV applies. `.env.example` already corrected.
+- Run `python scripts/assert_image_size.py careercompiler-service` on the box after build
+  (fires at 1.9 GB).
+- After deploy smoke: compile must 201 AND a planted inflated sentence must 422 (G3).
+
+## Local stack (left up deliberately)
+
+compose project `careercompiler` on this workstation: DB_HOST_PORT=5544, API_PORT=8890
+(5432 is cosmic-postgres, 8000 is the local Vedic Astro Engine — not ours, do not touch).
+`.env` is gitignored and carries the manager's OpenRouter key. Test image: `cc-test2`
+(rebuild: `docker build -t cc-nli2 .` then FROM cc-nli2 + pytest/ruff).
 
 ## Next action on resume
 
-`D1` — the renderer, in `app/engine/renderer.py`. Everything it needs exists: `select()`
-returns the fact ids allowed on the page, `linker.check()` enforces that the model used only
-those, and `entailment.gate()` catches what survives. The renderer's only job is to phrase
-selected facts into bullets that cite their ids. Then wire `POST /api/v1/compile` to run
-select → render → link → gate in that order, failing on the first gate that objects.
-
-**Verified environment for the next session:** build the test image with
-`docker build -t cc-nli2 .` then `FROM cc-nli2` plus `pip install pytest ruff`. Do **not**
-reuse a pre-existing `careercompiler-service:latest` on this workstation — the one found here
-was a stale 5.8 GB CUDA build and is not representative.
-
-## BLOCKED
-(none yet — see `BLOCKED.md`)
+Part B (demo sessions: B1 token endpoint with TTL+budget in redis, B2 three tests, B3 seed
+with planted disqualifying gap, B4 retention via portfolio-ops sweep of `demo-` prefixes,
+B5 estate probe 401 assertion). Then E frontend (Next.js, truth-layer skill first), F1, G,
+H in plan order. Plan: docs/superpowers/plans/2026-08-02-careercompiler-phase-2-3.md.
