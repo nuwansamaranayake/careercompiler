@@ -47,16 +47,34 @@ the git history of this file; its design decisions that still bind are carried f
 
 | Task | Status | Evidence |
 |---|---|---|
-| A1 single version source | **done** | 28 tests pass; `test_openapi_version_matches_the_version_the_front_page_renders` |
-| A2 record measured truth | todo | |
-| A3 contracts vs live schema | todo | |
+| A1 single version source | **done** | commit `841ff52`; two tests, incl. one proving the helper reads `APP_VERSION` |
+| A2 record measured truth | **done** | `DECISIONS.md` 002. Premise did not hold; no escalation |
+| A3 contracts vs live schema | todo | routes for B/D/F still to be added to `contracts.md` **before** their code |
 | B1–B5 demo access | todo | |
-| C1–C4 selector | todo | |
-| D1–D8 renderer + gates | todo | |
-| E1–E7 frontend | todo | |
+| C1–C4 selector | **C1–C3 done** | commit `3b0dac3`; 10 tests, mutation-checked. **C4 (paraphrase Jaccard ≥ 0.85) not written** |
+| D2 linker | **done** | commit `82effa4` |
+| D3/D5 entailment gate | **done** | commit `82effa4`; pinned digest, no fallback, 3 tests hold that line |
+| D4 torch discipline | **done** | commit `74b05b6`; **1.86 GB** measured, `--network none` load verified |
+| D6/D7 planted violations, red team | **done** | commit `82effa4`; 19 tests |
+| D1 renderer | **todo** | the LLM drafting step. Gates exist and are proven; nothing calls them yet |
+| D8 docx + provenance map | todo | |
+| E1–E7 frontend | todo | not started |
 | F1 ATS parse-back | todo | |
 | G1–G6 prove it | todo | |
-| H1–H6 release and deploy | todo | |
+| H1–H6 release and deploy | **todo — nothing pushed, nothing deployed** | |
+
+## Next action on resume
+
+`D1` — the renderer, in `app/engine/renderer.py`. Everything it needs exists: `select()`
+returns the fact ids allowed on the page, `linker.check()` enforces that the model used only
+those, and `entailment.gate()` catches what survives. The renderer's only job is to phrase
+selected facts into bullets that cite their ids. Then wire `POST /api/v1/compile` to run
+select → render → link → gate in that order, failing on the first gate that objects.
+
+**Verified environment for the next session:** build the test image with
+`docker build -t cc-nli2 .` then `FROM cc-nli2` plus `pip install pytest ruff`. Do **not**
+reuse a pre-existing `careercompiler-service:latest` on this workstation — the one found here
+was a stale 5.8 GB CUDA build and is not representative.
 
 ## BLOCKED
 (none yet — see `BLOCKED.md`)
