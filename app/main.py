@@ -3,10 +3,10 @@ from fastapi.responses import HTMLResponse
 from groundwork import Env
 from .config import settings
 from .fixtures import load_synthetic_fixture
-from .frontpage import render as render_front_page
+from .frontpage import build_version, render as render_front_page
 from .routes import router
 
-app = FastAPI(title="CareerCompiler")
+app = FastAPI(title="CareerCompiler", version=build_version())
 app.include_router(router)
 
 

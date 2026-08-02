@@ -1,11 +1,12 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 
-from app import db
+from app import db, frontpage
 from app.main import app
 
 GOLDEN = json.loads(
@@ -175,3 +176,30 @@ def test_root_reports_unknown_rather_than_a_fake_build_stamp(monkeypatch):
     frontpage._template.cache_clear()
     body = frontpage.render()
     assert "unknown" in body and "__SHA__" not in body and "__VERSION__" not in body
+
+
+def test_openapi_version_matches_the_version_the_front_page_renders(client):
+    """A1: one version, one source.
+
+    The served schema reported 0.1.0 (the FastAPI default, because no version was passed)
+    while the front page reported the deployed tag. A schema that is wrong about its own
+    version has not earned trust about anything else in it.
+    """
+    html = client.get("/").text
+    m = re.search(r"version <code>([^<]+)</code>", html)
+    assert m, "the front page no longer renders a version; this test needs updating"
+    rendered = m.group(1)
+
+    spec_version = client.get("/openapi.json").json()["info"]["version"]
+    assert spec_version == rendered, (
+        f"openapi.json says {spec_version!r} but the front page says {rendered!r}; "
+        "they must come from the same source")
+
+
+def test_build_version_is_read_from_the_environment(monkeypatch):
+    """Equality alone would pass if both sources were hardcoded to the same wrong string.
+    This proves the shared helper actually reflects the build argument."""
+    monkeypatch.setenv("APP_VERSION", "9.9.9-test")
+    assert frontpage.build_version() == "9.9.9-test"
+    monkeypatch.delenv("APP_VERSION")
+    assert frontpage.build_version() == "unreleased"

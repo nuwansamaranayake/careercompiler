@@ -20,10 +20,21 @@ def _template() -> str:
     return _PAGE.read_text(encoding="utf-8")
 
 
+def build_version() -> str:
+    """The one place the application's version comes from.
+
+    Both the front page and the OpenAPI schema read this. They previously did not: the page
+    read APP_VERSION while FastAPI fell back to its own default, so the deployed schema
+    announced 0.1.0 against a 0.2.3 tag. A schema that is wrong about its own version has not
+    earned trust about anything else in it.
+    """
+    return os.getenv("APP_VERSION", "unreleased")
+
+
 def render() -> str:
     """Substitute the build-time facts into the static page."""
     return (_template()
-            .replace("__VERSION__", os.getenv("APP_VERSION", "unreleased"))
+            .replace("__VERSION__", build_version())
             .replace("__SHA__", os.getenv("GIT_SHA", "unknown"))
             .replace("__BUILT__", os.getenv("BUILD_TIME", "unknown"))
             .replace("__ENV__", settings.app_env.value))

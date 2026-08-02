@@ -1,57 +1,62 @@
-# LOOP_STATE — CareerCompiler Phase 1
+# LOOP_STATE — CareerCompiler Phase 2 and Phase 3
 
-Branch: `phase-1`. Ledger cell: CareerCompiler Phase 1. BLUEPRINT L450-454: **fact extraction,
-JD parser, matcher, Fit Report. No generation** — the honest analyzer ships first. Exit also
-requires: real eval meeting EVAL.md bounds, smoke hits real business endpoints with real
-processing, alembic migrations with table count updated, CI eval flips to required, and the
-flywheel duty (a Seismograph contract ships with the LLM stage).
+Run started 2026-08-02. Plan: `docs/superpowers/plans/2026-08-02-careercompiler-phase-2-3.md`.
+Resume by reading the plan, then this file, then continuing at the first `todo` row.
 
-## Milestones (commit each; gate.py after each)
+Phase 1 closed 2026-07-23 (GATES_PASSED) and shipped as v0.2.3. Its milestone list lives in
+the git history of this file; its design decisions that still bind are carried forward below.
 
-- [x] M1  EVAL.md numeric thresholds first; LOOP_STATE; branch
-- [x] M2  engine/facts: span-anchored AtomicClaim model on groundwork.Claim; LLM fact
-         extractor via gateway (strict JSON schema); self_attested vs document_sourced flags;
-         data-entry path for claims (no LLM needed) (+tests, stub gateway)
-- [x] M3  engine/jd: JD parser (LLM, schema-forced) -> typed Requirements (must_have /
-         nice_to_have; skill|experience|education|other); data-entry path (+tests)
-- [x] M4  engine/matcher: deterministic requirement<->claim scoring — direct + transferable
-         (never presented as direct), embedding similarity + token rules, explainable
-         per-requirement evidence (+tests)
-- [x] M5  engine/fit: Fit Report — matched/partial/gap rows, disqualifying-gap logic, honest
-         apply / do-not-apply verdict with the case against applying (+tests)
-- [x] M6  scripts/eval.py: deterministic golden suite (synthetic fact graphs + labeled JDs,
-         planted gaps, pre-authored JD paraphrases) meeting EVAL.md bounds; byte-reproducible
-- [x] M7  schema + alembic (candidates, source_documents, atomic_claims, job_postings,
-         requirements, match_scores, fit_reports) EXPECTED_TABLE_COUNT=8; API: candidates,
-         claims (entry + key-gated extract), jobs (entry + key-gated parse), fit; CLI
-         `python -m app.cli fit`; smoke = real deterministic loop keyless; Dockerfile
-         migrate-on-start
-- [x] M8  flywheel: contracts/extraction-stability.yaml (Seismograph DSL, versioned here);
-         key-gated extraction paraphrase-invariance check; one REAL extraction observed
-- [x] M9  CI eval -> required; README/contracts.md/CHANGELOG truth pass; full gate + compose
-         smoke + prod-guard
+## Environment facts established (do not re-derive)
 
-## DECISION log
-- Zero-key smoke path: claims and requirements accept explicit data entry (a real product
-  feature — self-attested facts, manually typed requirements), so the deterministic
-  matcher+fit loop smokes keyless. LLM extract/parse endpoints refuse loudly without a key
-  (Standard 3: no silent fallback between paths).
-- Flywheel scope: the Seismograph contract YAML ships here (contracts live in the target
-  repo, per blueprint); the paraphrase-invariance check runs key-gated inside this repo's
-  eval. Wiring gate.py to execute it via Seismograph's own runner needs Seismograph Phase 2's
-  HTTP SUT adapter (Phase 1 Seismograph only samples in-process demo SUTs) — deferred there,
-  recorded here.
-- Claim atom = groundwork.Claim (type skill_evidence, evidence_ref.span into the source
-  document) extended with app fields (claim_key, kind, magnitude, recency, provenance flag).
-  The portfolio spine is reused, not reinvented.
+- **Local test loop:** `docker run --rm -v "E:/AiGNITE/AiPortifolio/careercompiler:/src" -w /src cc-test python -m pytest tests/ -q`
+  where `cc-test` is `careercompiler-service:latest` plus pytest and ruff. The runtime image
+  ships no pytest, by design.
+- **Production probe:** `docker run --rm --network host -v /opt/aignite-portfolio:/work <script>`
+  on `beacon-gom` using the `careercompiler-service` image. The host has no venv and no pip,
+  and building one on a live revenue box is not worth the risk.
+- **Bearer token for production probes:** `/opt/aignite-portfolio/careercompiler/.smoke_token`.
+- **Deployed:** tag `v0.2.3`, SHA `981e05e`, `APP_VERSION=0.2.3`, up 5 days.
+- **Models configured in production:** extraction `google/gemini-2.5-flash`, reasoning
+  `anthropic/claude-sonnet-5`, judge `openai/gpt-5.1`, embedding
+  `openai/text-embedding-3-small`, NLI `cross-encoder/nli-deberta-v3-base` — D3 must still
+  verify that one against a current source and pin a revision digest.
+
+## Measured, not assumed (2026-08-02)
+
+- The LLM path **works in production**. Extract: 22 claims in 8.0s, 0 rejected span anchors.
+  JD parse: 4 requirements in 1.0s. Fit: `verdict=apply, matched=3, partial=1, gaps=0`.
+  **The brief's A2 premise — that a reviewer hits a 503 — does not hold.**
+- Real endpoint paths differ from the brief: extraction is
+  `POST /api/v1/candidates/{cid}/claims/extract`; JD parse is
+  `POST /api/v1/jobs/{jid}/requirements/parse`.
+- The manager's supplied OpenRouter key verifies: 200 from `chat/completions`, `is_byok: true`.
+- Only two GET routes exist under `/api/v1`: `/fit/{rid}` (401 without a token) and `/demo`
+  (503 outside development). Everything else is POST, so a probe expecting GET 401 on them
+  gets 405 — the probe is wrong, not the app.
+
+## Design decisions carried forward from Phase 1
+
+- **Zero-key entry paths are a product feature, not a fallback.** Claims and requirements
+  accept explicit data entry (self-attested facts, hand-typed requirements), so the
+  deterministic matcher and fit loop smoke without a key. The LLM endpoints refuse loudly
+  without one. There is no silent path between the two, and there must never be.
+- **Claim atom = `groundwork.Claim`** (type `skill_evidence`, `evidence_ref.span` into the
+  source document) extended with app fields. The portfolio spine is reused, not reinvented.
+
+## Progress
+
+| Task | Status | Evidence |
+|---|---|---|
+| A1 single version source | **done** | 28 tests pass; `test_openapi_version_matches_the_version_the_front_page_renders` |
+| A2 record measured truth | todo | |
+| A3 contracts vs live schema | todo | |
+| B1–B5 demo access | todo | |
+| C1–C4 selector | todo | |
+| D1–D8 renderer + gates | todo | |
+| E1–E7 frontend | todo | |
+| F1 ATS parse-back | todo | |
+| G1–G6 prove it | todo | |
+| H1–H6 release and deploy | todo | |
 
 ## BLOCKED
-(none)
-
-## Next task
-NONE — Phase 1 GATES_PASSED (2026-07-23). All DONE-WHEN items observed: gate.py exit 0
-(ruff, 16 pytest, live business-loop smoke, eval all bounds 1.0), MIGRATION OK: 8 tables (host
-run and container self-migrate), prod-guard 503-fixture + fit-endpoint-200, containerized
-smoke SMOKE OK, flywheel contract validated + key-gated LLM eval recall 1.00 / jaccard 0.92.
-Branch `phase-1`, NOT pushed. Awaiting explicit `release CareerCompiler phase 1`; next cell
-after that is Mycelium Phase 1 (ledger order).
+(none yet — see `BLOCKED.md`)
