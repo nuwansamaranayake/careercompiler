@@ -26,5 +26,16 @@ class AppConfig(BaseConfig):
     llm_model_judge: str = ""
     embedding_model: str = ""
 
+    # The entailment gate (Phase 2). Model and revision come from the image ENV, baked by the
+    # Dockerfile; the revision is a digest, not a tag, and entailment.py refuses to run
+    # without one (DECISIONS.md 001). Threshold calibrated against the measured separation:
+    # supported 0.992, inflated verb 0.027, fabricated employer 0.001.
+    nli_model: str = ""
+    nli_model_revision: str = ""
+    nli_entail_threshold: float = 0.7
+
+    # Compile defaults. ~28 rendered lines approximates one printed page of bullets.
+    compile_budget_lines: int = 28
+
 
 settings = AppConfig()

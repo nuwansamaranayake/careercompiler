@@ -1,0 +1,30 @@
+# Local compose E2E, real LLM + real NLI weights, dummy data. 2026-08-02.
+# Image 1.86 GB; MIGRATION OK: 11 tables. Renderer: per-fact form, faithful-restate charter.
+## run 1
+  PASS  extract stores claims  stored=22 rejected_anchor=0
+  PASS  JD parses to requirements  parsed=4
+  PASS  fit verdict returned  verdict=apply matched=3
+  PASS  compile returns 201  33s total; bullets=22 omitted=0 uncovered_must=[]
+  PASS  every bullet carries a real entailment score  min=0.896 max=0.997
+  PASS  selector omitted something or covered all  omitted_reasons=[]
+  PASS  provenance resolves cited facts  bullets=22
+  PASS  docx downloads  bytes=38390
+  PASS  inflated sentence is REJECTED on real weights  score=0.0006
+  PASS  invented number is rejected by the linker
+  PASS  the faithful sentence passes  score=0.9976
+
+E2E OK: 11 checks passed, real LLM + real NLI weights, dummy data only
+## run 2
+  PASS  extract stores claims  stored=23 rejected_anchor=0
+  PASS  JD parses to requirements  parsed=4
+  PASS  fit verdict returned  verdict=apply matched=3
+  PASS  compile returns 201  27s total; bullets=23 omitted=0 uncovered_must=[]
+  PASS  every bullet carries a real entailment score  min=0.980 max=0.998
+  PASS  selector omitted something or covered all  omitted_reasons=[]
+  PASS  provenance resolves cited facts  bullets=23
+  PASS  docx downloads  bytes=38434
+  PASS  inflated sentence is REJECTED on real weights  score=0.0007
+  PASS  invented number is rejected by the linker
+  PASS  the faithful sentence passes  score=0.9985
+
+E2E OK: 11 checks passed, real LLM + real NLI weights, dummy data only

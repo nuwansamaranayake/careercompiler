@@ -14,13 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
 COPY pyproject.toml README.md ./
 RUN pip install --upgrade pip
 
-COPY . .
-RUN pip install .
-
-# The entailment gate's runtime. The CPU wheel index is pinned HERE and in CI, never in
-# pyproject.toml: a plain `pip install torch` on linux resolves the CUDA build, which is how
-# four apps in this estate reached 5.6-5.8 GB images before ~20 GB was reclaimed by removing
-# them. Verified after build: torch reports +cpu and torch.version.cuda is None.
+# The entailment gate's runtime, installed BEFORE the source is copied so a code change
+# never re-downloads torch or the model (the layers cache until these lines change).
+# The CPU wheel index is pinned HERE and in CI, never in pyproject.toml: a plain
+# `pip install torch` on linux resolves the CUDA build, which is how four apps in this
+# estate reached 5.6-5.8 GB images before ~20 GB was reclaimed by removing them.
 RUN pip install --no-cache-dir \
       --extra-index-url https://download.pytorch.org/whl/cpu \
       "torch==2.13.0" "transformers==5.14.1" \
@@ -41,6 +39,9 @@ M.from_pretrained(mid, revision=rev)" \
  && python -c "\
 import torch; assert torch.version.cuda is None, 'CUDA torch leaked into the image'; \
 print('torch', torch.__version__)"
+
+COPY . .
+RUN pip install .
 
 # Build-time facts for the root page. Baked from build args so the deployed page can state
 # what is actually running; absent values render as "unknown", never as a placeholder.

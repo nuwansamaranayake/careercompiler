@@ -92,6 +92,44 @@ match_scores = sa.Table(
     sa.Column("explanation", sa.Text, nullable=False),
 )
 
+# Phase 2: only documents that passed BOTH gates are ever persisted. A failed compile
+# returns its violations and stores nothing, so every row in these tables is a document
+# whose every sentence traced to a fact at the moment it was written.
+compiled_documents = sa.Table(
+    "compiled_documents", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("candidate_id", sa.Integer, sa.ForeignKey("candidates.id"), nullable=False),
+    sa.Column("job_id", sa.Integer, sa.ForeignKey("job_postings.id"), nullable=False),
+    sa.Column("budget_lines", sa.Integer, nullable=False),
+    sa.Column("used_lines", sa.Integer, nullable=False),
+    sa.Column("nli_model", sa.Text, nullable=False),
+    sa.Column("nli_revision", sa.Text, nullable=False),
+    sa.Column("nli_threshold", sa.Float, nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+)
+
+rendered_bullets = sa.Table(
+    "rendered_bullets", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("document_id", sa.Integer, sa.ForeignKey("compiled_documents.id"),
+              nullable=False),
+    sa.Column("position", sa.Integer, nullable=False),
+    sa.Column("text", sa.Text, nullable=False),
+    sa.Column("cites", JSON, nullable=False),
+    sa.Column("entailment", sa.Float),
+)
+
+selection_omissions = sa.Table(
+    "selection_omissions", metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("document_id", sa.Integer, sa.ForeignKey("compiled_documents.id"),
+              nullable=False),
+    sa.Column("claim_id", sa.Text, nullable=False),
+    sa.Column("claim_key", sa.Text, nullable=False),
+    sa.Column("reason", sa.Text, nullable=False),
+    sa.Column("detail", sa.Text, nullable=False),
+)
+
 _engine = None
 _Session = None
 

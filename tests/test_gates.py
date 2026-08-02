@@ -189,3 +189,29 @@ def test_number_normalisation_does_not_open_a_hole():
     assert linker.normalise_number("8K") == "8k"
     assert linker.numbers_in("grew it 40%") == {"40%"}
     assert "400" not in linker.numbers_in("hired 4000 people")
+
+
+def test_renderer_translates_aliases_and_leaves_unknown_tokens_for_the_linker():
+    """The model cites F1/F2; code translates back. A mangled alias survives untranslated
+    and fails reference integrity downstream — never silently dropped or repaired."""
+    from app.engine.renderer import draft_bullets
+    from app.engine.jd import requirements_from_entries
+
+    facts = claims_from_entries(TRUTH)
+    reqs = requirements_from_entries(
+        [{"req_key": "lead", "text": "Team leadership", "kind": "experience",
+          "must_have": True}])
+
+    class GW:
+        def complete(self, *, model, messages, json_schema):
+            return {"renderings": [
+                {"id": "F1", "text": "Led a team of 4 engineers."},
+                {"id": "F2", "text": "Cut deploy time 40%."},
+                {"id": "F9", "text": "A rendering for a fact that does not exist."}]}
+
+    bullets = draft_bullets(GW(), "m", facts, "Job", reqs)
+    assert bullets[0].cites == [facts[0].core.claim_id]
+    assert bullets[1].cites == [facts[1].core.claim_id]
+    assert bullets[2].cites == ["F9"], "an unknown alias must survive to fail the linker"
+    report = check(bullets, facts, [c.core.claim_id for c in facts])
+    assert any(v.failure is LinkFailure.unknown_fact_id for v in report.violations)
