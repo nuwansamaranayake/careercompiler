@@ -68,3 +68,40 @@ POST /fit                               201  {"verdict":"apply","matched":3,...}
 `OPENROUTER_API_KEY` is configured and the LLM path works. The 503 exists in `routes.py:41`
 but does not fire in production. **There is no decision to escalate and no BLOCKED entry**,
 and reporting one would have been reporting the brief back rather than the system.
+
+---
+
+## DECISION 003 — torch is CPU-only, pruned, and the model is baked
+
+**Date:** 2026-08-02
+**Status:** adopted and measured
+
+Four apps in this estate once declared `sentence-transformers`, pulled CUDA wheels, and ran
+5.6–5.8 GB images; removing them reclaimed roughly 20 GB. This change deliberately brings a
+torch dependency back, so it carries the constraints that failure earned.
+
+**Measured, not specified:**
+
+| Build | Size |
+|---|---|
+| Baseline, no entailment gate | 610 MB |
+| CPU torch + transformers + baked model | 1.99 GB |
+| Same, with `torch/test` and `torch/include` removed | **1.86 GB** |
+
+The 1.99 GB figure passed the 2 GB ceiling by 10 MB. That is not a margin — any torch or
+transformers patch release crosses it — so the two build-time artifact directories are removed
+after install, buying 140 MB of real headroom. Nothing with a runtime use was touched.
+
+**The CPU wheel index is pinned in the Dockerfile and in CI, never in `pyproject.toml`.** A
+plain `pip install torch` on linux resolves the CUDA build. The build asserts
+`torch.version.cuda is None` and fails if a CUDA wheel ever leaks in, because the next person
+to add a dependency will not remember this.
+
+**The checkpoint is baked.** Verified by loading it with `--network none`. The gate's
+availability must not depend on Hugging Face being reachable from a box that also serves
+Beacon GoM's paying users.
+
+**Stale-image warning for anyone testing locally.** The `careercompiler-service:latest` image
+on this workstation was 5.8 GB and contained `torch 2.13.0+cu130` — it predated the cleanup
+commit `e83080f`. Production was already clean at 608 MB. A local image is not evidence about
+production; rebuild before drawing conclusions from one.

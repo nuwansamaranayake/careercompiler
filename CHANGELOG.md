@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Knapsack content selector** (`app/engine/selector.py`). CP-SAT maximizes requirement
+  coverage, evidence strength, recency and quantified impact under a hard line budget.
+  Every omitted fact carries one of four typed reasons, because a fact nobody asked for is a
+  different answer than a fact that competed and lost.
+- **Reference-integrity linker** (`app/engine/linker.py`). Deterministic, microseconds, runs
+  before the model loads. Rejects a bullet citing nothing, an unknown fact id, a rejected span
+  anchor, a fact the selector left off the page, and any number appearing in no cited fact.
+- **NLI entailment gate** (`app/engine/entailment.py`). Pinned by revision digest. No fallback
+  path: model unavailable raises `EntailmentUnavailable` and the build fails.
+
+### Measured
+- **Image size: 1.86 GB**, against the 2.00 GB ceiling. Baseline without the gate is 610 MB.
+  torch reports `2.13.0+cpu` and `torch.version.cuda is None`, asserted during the build.
+  `torch/test` (83 MB) and `torch/include` (62 MB) are removed after install: build-time
+  artifacts with no runtime use. A first attempt without that pruning measured **1.99 GB** —
+  a 10 MB margin, which is a coin flip rather than a margin.
+- **The gate discriminates on real weights**, verified with `--network none` to prove the
+  checkpoint is baked and never fetched at request time. Against the cited fact "Led a team of
+  4 engineers at Acme Corp from 2019 to 2022":
+
+  | Sentence | Entailment |
+  |---|---|
+  | "Led a team of 4 engineers at Acme Corp." | 0.992 |
+  | "Directed engineering across the entire company." | 0.027 |
+  | "Led a team of 4 engineers at Initech." | 0.001 |
+
+- **The LLM path works in production** (2026-08-02): extraction 22 claims in 8.0s with 0
+  rejected span anchors, JD parse 4 requirements in 1.0s, fit `verdict=apply`. The brief's
+  premise that a reviewer meets a 503 does not hold.
+
+### Fixed
+- The served `openapi.json` announced FastAPI's default `0.1.0` while the front page showed
+  the deployed tag. Both now read `frontpage.build_version()`.
+
+
 ## [0.2.3] - 2026-07-27
 
 ### Added
