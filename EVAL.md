@@ -58,6 +58,12 @@ models, embedder `auto` → openrouter.
   real-embedding noise floor sat above the hashing-tuned match floors, so a must-have
   GAP was unreachable). Post-calibration: 4 apply / 2 do-not-apply — **6/6 correct**,
   verified by re-fit on the same stored pairings.
+- **Repeated against PRODUCTION v0.4.1 (2026-08-03, fresh extraction draw):** 118
+  facts, 1 rejected on span anchoring (0.8%, shown legibly in the product); 6/6
+  pairings compiled end to end (resume, letter, pack) in 139–159s each; the repair
+  loop engaged exactly one audited round in every pairing; verdicts 6/6 correct
+  (nurse 2/7 must-haves → do-not-apply, design-systems 4/6 → do-not-apply, the four
+  genuine matches apply). Zero refusals, zero crashes.
 
 ### Matcher floor calibration (35 labeled rows from the corpus run)
 
