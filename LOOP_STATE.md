@@ -1,66 +1,54 @@
-# LOOP_STATE — CareerCompiler Phase 2 and Phase 3
+# LOOP_STATE — CareerCompiler overnight run 2026-08-02/03
 
-Run started 2026-08-02. Plan: `docs/superpowers/plans/2026-08-02-careercompiler-phase-2-3.md`.
-Resume by reading the plan, then this file, then continuing at the first `todo` row.
-
-Phase 1 closed 2026-07-23 (GATES_PASSED) and shipped as v0.2.3. Its milestone list lives in
-the git history of this file; its design decisions that still bind are carried forward below.
+Resuming: read NEXT.md first, then this file. Prior phase history: git log of this file.
 
 ## Environment facts established (do not re-derive)
 
-- **Local test loop:** `docker run --rm -v "E:/AiGNITE/AiPortifolio/careercompiler:/src" -w /src cc-test python -m pytest tests/ -q`
-  where `cc-test` is `careercompiler-service:latest` plus pytest and ruff. The runtime image
-  ships no pytest, by design.
-- **Production probe:** `docker run --rm --network host -v /opt/aignite-portfolio:/work <script>`
-  on `beacon-gom` using the `careercompiler-service` image. The host has no venv and no pip,
-  and building one on a live revenue box is not worth the risk.
-- **Bearer token for production probes:** `/opt/aignite-portfolio/careercompiler/.smoke_token`.
-- **Deployed:** tag `v0.2.3`, SHA `981e05e`, `APP_VERSION=0.2.3`, up 5 days.
-- **Models configured in production:** extraction `google/gemini-2.5-flash`, reasoning
-  `anthropic/claude-sonnet-5`, judge `openai/gpt-5.1`, embedding
-  `openai/text-embedding-3-small`, NLI `cross-encoder/nli-deberta-v3-base` — D3 must still
-  verify that one against a current source and pin a revision digest.
+- **Local test loop:** `docker run --rm -e WEB_DIR=/nonexistent -v "E:/AiGNITE/AiPortifolio/careercompiler:/src" -w /src cc-test python -m pytest tests/ -q`
+  The `WEB_DIR=/nonexistent` matters: the image bakes /srv/web, which otherwise serves the
+  static landing page at `/` and breaks the groundwork version assertions (the static page
+  carries no version markup; the test suite runs against source-checkout semantics, as
+  app/main.py documents). cc-test = careercompiler-service:latest + pytest + ruff; rebuild
+  both after dependency or engine changes (scratchpad/cc-test.Dockerfile).
+- **Estate smoke runs from THIS machine:** `python portfolio-ops/scripts/estate_smoke.py --ssh beacon-gom`
+  (host has no pip; in-container runs lack docker CLI for the log probes).
+- **Prod deploy:** on beacon-gom, `/opt/aignite-portfolio/careercompiler`, compose file
+  `compose.prod.yml`, build args APP_VERSION/GIT_SHA/BUILD_TIME passed on the CLI.
+  Rollback image tagged `careercompiler-service:rollback-v031` on the host.
+- **Local stack:** port 8890, local .env OpenRouter key WORKS (full LLM path testable).
+- **Concurrent-session hazard (observed tonight):** an earlier session ("AiPortifolio",
+  same tree) auto-pushed 00579ef and created tag v0.3.2@00579ef at 21:32 CDT while this
+  run was live; it went idle 21:46 CDT. Check `git ls-remote` before tags/pushes and
+  `list_sessions` for isRunning before trusting the working tree.
 
-## Measured, not assumed (2026-08-02)
+## Production state
 
-- The LLM path **works in production**. Extract: 22 claims in 8.0s, 0 rejected span anchors.
-  JD parse: 4 requirements in 1.0s. Fit: `verdict=apply, matched=3, partial=1, gaps=0`.
-  **The brief's A2 premise — that a reviewer hits a 503 — does not hold.**
-- Real endpoint paths differ from the brief: extraction is
-  `POST /api/v1/candidates/{cid}/claims/extract`; JD parse is
-  `POST /api/v1/jobs/{jid}/requirements/parse`.
-- The manager's supplied OpenRouter key verifies: 200 from `chat/completions`, `is_byok: true`.
-- Only two GET routes exist under `/api/v1`: `/fit/{rid}` (401 without a token) and `/demo`
-  (503 outside development). Everything else is POST, so a probe expecting GET 401 on them
-  gets 405 — the probe is wrong, not the app.
+- **Deploy 1 (done):** v0.3.2 build (SHA 82ae595) live at careercompiler.aigniteconsulting.ai.
+  Snapshot 107426401 success 02:35:50Z BEFORE deploy. MIGRATION OK 11 tables. Estate
+  smoke exit 0 before and after. Obj 1 pass condition proven in a production browser:
+  evidence/2026-08-03-obj1-production-walkthrough.txt. Beacon GoM untouched (5w uptime,
+  mem flat). NOTE: tag v0.3.2 points at 00579ef (the other session's act); production
+  self-reports 0.3.2@82ae595. Cosmetic; Deploy 2 ships as v0.4.0.
+- **Deploy 2 (pending CI):** SHA a6acee4 = cover letters (gated, migration 0004 kind
+  column, count stays 11) + interview pack + rejection legibility + normalization root
+  fix + tailoring position. All local gates green (ruff, 89 tests, web build). Local E2E
+  with real NLI: letter entails 0.79–0.97, planted overstatement rejected at 0.0003.
 
-## Design decisions carried forward from Phase 1
+## Run ledger
 
-- **Zero-key entry paths are a product feature, not a fallback.** Claims and requirements
-  accept explicit data entry (self-attested facts, hand-typed requirements), so the
-  deterministic matcher and fit loop smoke without a key. The LLM endpoints refuse loudly
-  without one. There is no silent path between the two, and there must never be.
-- **Claim atom = `groundwork.Claim`** (type `skill_evidence`, `evidence_ref.span` into the
-  source document) extended with app fields. The portfolio spine is reused, not reinvented.
+- PASS 1 GOAL: Obj 1 custom job flow shipped and proven in production.
+  OUTCOME: achieved — evidence/2026-08-03-obj1-production-walkthrough.txt.
+- PASS 2 GOAL: Obj 2 legible rejections + root cause; Obj 3 letters; Obj 4 pack; Obj 5
+  position. OUTCOME (code): achieved locally, gates green, awaiting Deploy 2.
+  Obj 2 root cause MEASURED: candidate 31 source stores "AI-native\nsystems" (pypdf
+  layout wrap) while the model quotes with a space; fix normalizes stored text; gate
+  untouched. Format-rate measurement runs post-Deploy-2 (candidate-31 replay + PDF/docx
+  pair).
 
-## Progress — SHIPPED 2026-08-03
+## Next
 
-**Live: https://careercompiler.aigniteconsulting.ai — v0.3.1 (SHA 54745de), estate gate
-exit 0, G6 walkthrough green.** Tags: careercompiler v0.3.0 + v0.3.1, portfolio-ops v0.3.0.
-
-| Part | Status | Evidence |
-|---|---|---|
-| 0.1 prod NLI env | done | pinned pair set on host, backup kept |
-| 0.2 host audit | done | `evidence/2026-08-03-host-audit-predeploy.txt` (8.6 GB available) |
-| 0.3 limits | done | 1500m/2cpu applied; observed peak 687.6 MiB under real compile |
-| B1–B5 | done | `tests/test_demo.py` (403/429/401); estate probe asserts 401x3 + cross-tenant 403 |
-| B4 retention | done | `evidence/2026-08-03-b4-retention-drill.txt` — by row count, on production |
-| E frontend + E2 | done | `evidence/2026-08-03-production-walkthrough.txt` |
-| E9 truth audit | done | 30-agent adversarial audit; all confirmed findings fixed in v0.3.1 |
-| G1–G5 | done | `evidence/2026-08-03-postdeploy-smoke.txt` exit 0; TLS chain verify 0 (ok); 11 tables |
-| G6 | done | production walkthrough evidence above |
-| H1–H5, H7, H8 | done | CI-green tags; README/EVAL/DECISIONS/FAILURES current |
-| H6 1-hour watch | done | `evidence/2026-08-03-h6-stats-watch.txt` — 60 samples, peak 731.2 MiB of 1500 (~49%), Beacon GoM unaffected, no rollback |
-| FAIL-0009 | recorded | 3-min 502 from stale EXPECTED_TABLE_COUNT; guard worked, checklist gap fixed |
-
-Deferred (BLOCKED.md): C4 paraphrase stability, threshold calibration, F1 ATS parse-back.
+1. CI green on a6acee4 → Deploy 2 (v0.4.0): host build w/ args, up, table count 11,
+   smoke, browser walkthrough of letter + pack, estate smoke, docker stats, tag v0.4.0.
+2. Obj 2 measurement: replay candidate 31 text via entry path (rates before/after), and
+   riley PDF vs docx pair. Record in EVAL.md.
+3. Obj 6 if green. 4. SESSION_REPORT.md + NEXT.md.

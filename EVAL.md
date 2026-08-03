@@ -41,6 +41,36 @@ and never silently skipped: the report states loudly when the key-gated section 
 The gate-test, selection-stability, ATS, and human-preference bounds below join in Phase 2/3
 with the code they measure.
 
+## Entailment threshold calibration (graded suite, 2026-08-03)
+
+The 0.7 threshold sat uncalibrated between measured extremes (faithful 0.9976, inflated
+0.0015). `scripts/eval_threshold.py` grades the space between against the pinned NLI
+(`MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli @ 6f5cf0a2`), 24 cases in six categories.
+
+Measured: every faithful restatement and every weakening hedge scored ≥ 0.97; 15 of 17
+planted violations scored ≤ 0.57 (most ≤ 0.10). The curve at candidate thresholds —
+false accepts are should-reject cases surviving, false rejects are honest cases killed:
+
+| threshold | false accepts | false rejects |
+|---|---|---|
+| 0.50 | 3 | 0 |
+| 0.70 (current) | 2 | 0 |
+| 0.95 | 1 | 0 |
+
+**The choice, from the curve: keep 0.7.** Raising to 0.95 looks free on this suite, but
+production letter-voice sentences measured 0.79–0.83 while faithful (local E2E,
+2026-08-03) — a 0.95 gate would false-reject honest cover letters. A per-document-kind
+threshold needs a letter-voice suite before it is anything but a guess.
+
+**The published misses at 0.7 — claims this gate does not catch:**
+- "Transformed engineering velocity by rebuilding the CI pipeline" scored 0.9785 against
+  "Cut deploy time 40% by rebuilding the CI pipeline in Python" — requirement-flavored
+  gloss without a checkable number. (This is why the renderer never sees requirements:
+  the prompt discipline prevents what this gate would miss.)
+- "Led 4 engineering teams at Acme Corp" scored 0.9463 against "Led a team of 4
+  engineers at Acme Corp" — a quantifier inversion the linker's number check also
+  passes, since the 4 is copied faithfully. Known hole, published, unfixed.
+
 ## Status
 
 The harness is real as of Phase 1: `scripts/eval.py` enforces the table above (first
