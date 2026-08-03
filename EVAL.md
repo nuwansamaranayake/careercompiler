@@ -41,6 +41,45 @@ and never silently skipped: the report states loudly when the key-gated section 
 The gate-test, selection-stability, ATS, and human-preference bounds below join in Phase 2/3
 with the code they measure.
 
+## Span-anchor rejection rates by input format (measured in production, 2026-08-03)
+
+The 2026-08-02 live run rejected 35 of 138 extracted facts on span anchoring from one
+real resume. Root cause, measured (not assumed): the stored PDF text hard-wrapped
+sentences at layout line breaks ("AI-native\nsystems in production") and doubled spaces
+at layout gaps; the model quoted with normal spacing; the byte-verbatim find failed.
+The fix normalizes what is stored — the anchor check itself is unchanged.
+
+| input | storage | rejected | rate |
+|---|---|---|---|
+| real-world resume PDF (candidate 31) | pre-fix (raw pypdf text) | 35/138 | 25.4% |
+| the same text, re-run through normalized storage | post-fix | 0/154 | 0.0% |
+| clean single-column PDF (riley pair) | post-fix | 0/19 | 0.0% |
+| identical content as docx (riley pair) | post-fix | 0/19 | 0.0% |
+
+All post-fix rows measured against production (v0.4.0) through the real API with the
+real extraction model. Rejections that do occur now ship with their evidence: the
+claim, and the quote that could not be located, rendered in the product as the anchor
+check working. (Counts differ across runs — the extraction model is not deterministic;
+rates are the measure.)
+
+## C4 paraphrase stability (measured 2026-08-03, acceptance NOT met — published)
+
+Two JDs describing the identical role in different words, real parse, deterministic
+matcher, fixed 6-fact set. Metric: Jaccard of matched-FACT sets (req keys are
+model-chosen labels; comparing them would measure spelling).
+
+| embedder | Jaccard | acceptance |
+|---|---|---|
+| hashing (keyless default) | 0.600 | >= 0.85 — FAIL |
+| openrouter (text-embedding-3-small) | 0.833 | >= 0.85 — FAIL, by one fact |
+
+The measured failure mode: paraphrase changes which nice-to-haves the parse emits and
+the matcher resolves (JD B's "Bonus: experience leading engineers" matched the
+leadership fact; JD A's "Nice to have: team leadership" did not reach it under hashing).
+Must-have coverage — what drives the verdict — agreed across paraphrases in both runs.
+Next measurement, not tuning: verdict stability under paraphrase, and Jaccard stratified
+must-have vs nice-to-have. `scripts/eval_paraphrase.py`.
+
 ## Entailment threshold calibration (graded suite, 2026-08-03)
 
 The 0.7 threshold sat uncalibrated between measured extremes (faithful 0.9976, inflated

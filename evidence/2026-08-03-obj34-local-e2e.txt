@@ -1,0 +1,28 @@
+Objectives 3 + 4 local verification — 2026-08-03 ~03:10–03:25 UTC
+Stack: local (port 8890), image with letter+pack code, REAL LLM + REAL pinned NLI gate.
+
+API E2E (scratchpad/letter_e2e.py), all against a live demo session:
+- POST /cover-letter -> 201. Five first-person sentences, real entailment scores:
+  0.8286, 0.9497, 0.9595, 0.9717, 0.7896 — letter voice clears the 0.7 gate.
+- Letter docx: valid zip, 37660 bytes, filename careercompiler-letter-8.docx.
+- PLANTED OVERSTATEMENT on a letter sentence ("I directed the entire engineering
+  organisation single-handedly." citing the team_lead fact): /compile/check returned
+  ok=false, entailment 0.0003. The letter is gated exactly like the resume.
+- POST /interview-pack -> 201. First bullet: 1 cited fact, metrics ['6'] extracted
+  deterministically, 2 substantive skeptical questions. Pack docx valid zip 37980 B.
+- Defect found and fixed in the same pass: tenant scope prefix leaked into the letter
+  opening ("the demo-20260803T031221Z-bcd0dc-Platform Engineer role"). _display() strip
+  added at every document seam, regression-tested (test_normalize.py).
+
+Browser UI E2E (Playwright on /demo/):
+- Session expiry rendered honestly (fatal panel + restart), then a fresh session:
+  fit -> compile -> "Compile the cover letter" -> letter panel rendered with
+  "Dear Hiring Team,", template chips on the role line and closing, gated sentences
+  with entailment chips.
+- "Build the interview pack" -> pack rendered: 10 skeptical questions, 5 per-bullet
+  "metrics in the evidence" lines, gaps section present (empty for this fully-matched
+  seeded job, stated as such).
+
+Unit/proof suite: 89 tests green, including planted-overstatement letter (422,
+persists nothing), invented-number letter (reference_integrity), pack determinism,
+pack docx, and the normalization regression cases from the measured production failure.

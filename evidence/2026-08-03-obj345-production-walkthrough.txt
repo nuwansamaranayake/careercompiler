@@ -1,0 +1,42 @@
+Objectives 3, 4, 5 — production browser walkthrough + Objective 2 measurement
+2026-08-03 ~03:29–03:32 UTC, https://careercompiler.aigniteconsulting.ai/demo/
+Deployed: v0.4.0, SHA 51ca391, CI success on that exact SHA (run watched to completion).
+Snapshot 107426401 (2026-08-03T02:35:50Z) still current from Deploy 1; rollback image
+careercompiler-service:rollback-v031 on host.
+
+Deploy record:
+- Host build with APP_VERSION=0.4.0 GIT_SHA=51ca391; compose up; boot log shows
+  "Running upgrade 0003_compile_tables -> 0004_document_kind" then "MIGRATION OK: 11
+  tables" (the guarded production path). kind column present, default 'resume'.
+- Public smoke: / 200, /demo/ 200, /health 200 (GET, cache-busted).
+- Estate smoke post-deploy: exit 0, all six apps PASS (TLS valid, guards 503, tables
+  9/9 and 11/11).
+- docker stats: careercompiler-service 546.5MiB / 1.465GiB; Beacon GoM containers
+  unchanged (84.1 / 233.7 / 4.9 / 5.1 MiB, 5-week uptimes); host 8129 MB available.
+  No rollback condition.
+
+Objective 3 (cover letter), in the production browser:
+- After the resume compile: "Compile the cover letter" -> letter rendered.
+  "Dear Hiring Team," + role line and closing carrying visible "template" chips (3);
+  five first-person evidence sentences with entailment chips 0.79–0.97; no tenant
+  prefix anywhere (the display fix holds in production).
+- PASS CONDITION: challenged the letter sentence "I led a team of 4 engineers…",
+  used the overstatement helper (4 -> 40): the compile REJECTED it —
+  "unsupported_number: the number '40' appears in no cited fact; the model computed
+  or invented it" — with the cited evidence shown beside the rejection. A planted
+  overstatement in a cover letter fails the compile in production.
+
+Objective 4 (interview pack), same session:
+- "Build the interview pack" -> 15 skeptical questions across the bullets, 5
+  "metrics in the evidence" lines (deterministic numbers from cited facts), gaps
+  section present. Sample question: "Can you walk me through the specific Python
+  services you built and operated at Acme Corp over those 6 years?" Docx download
+  endpoint proven by test + local E2E (valid zip, prep filename).
+
+Objective 5 (tailoring position), same session:
+- "How tailoring works here" paragraph renders beside the compiled page: selection
+  not rewording, with the cover-letter exception stated. DECISIONS.md 004 updated.
+
+Objective 2 measurement (production API, real models) — see EVAL.md table:
+- candidate 31 replay: 25.4% rejected (pre-fix storage) -> 0.0% (normalized storage).
+- riley PDF vs docx (identical content): 0.0% and 0.0%.
