@@ -71,7 +71,7 @@ async function api<T>(token: string, path: string, init?: RequestInit): Promise<
 
 function friendly(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e);
-  if (m === "SESSION_EXPIRED") return "This demo session expired. Start a new one — nothing is lost, the data was synthetic.";
+  if (m === "SESSION_EXPIRED") return "This demo session expired. Start a new one. The seeded data was synthetic; anything you uploaded stays in its expired tenant until the retention sweep deletes it.";
   if (m === "BUDGET_EXHAUSTED") return "This session's request budget is spent. Start a new one.";
   return m;
 }
@@ -93,7 +93,8 @@ export default function Demo() {
       <div className="panel limits">
         <strong>Synthetic data.</strong> The seeded candidate and jobs are invented and
         labelled as such. If you upload your own resume it is personal data: it stays in a
-        session-scoped tenant and is deleted within 7 days. Tailoring here is evidence
+        session-scoped tenant and is automatically deleted by a retention sweep once it
+        is older than 7 days (proven by row count against production). Tailoring here is evidence
         selection — the renderer never sees the job posting, so wording does not shift per
         job; what changes is which facts make the page.
       </div>
@@ -135,7 +136,7 @@ function SessionView({ session, restart }: { session: Session; restart: () => vo
     <>
       <h2>1 · Honest fit verdicts <span className="chip syn">synthetic</span></h2>
       <p className="dim">
-        Candidate: <strong>{session.candidate_name}</strong> — five verified facts. Two job
+        Candidate: <strong>{session.candidate_name}</strong> — five seeded facts, each carrying provenance. Two job
         postings, seeded so you can see both answers the product gives.
       </p>
       {session.jobs.map((j) => (
@@ -231,11 +232,11 @@ function CompilePanel({ session, job, guard }: { session: Session; job: Job; gua
       <span className="dim small">the model phrases, two gates check; ~30 s in our measured runs</span></p>;
   if (state === "run")
     return <p className="dim"><span className="spin">◌</span> Compiling — {secs}s. Selection is
-      instant; phrasing and gating take the time.</p>;
+      deterministic; phrasing and the gates take the time.</p>;
   if (state === "fail")
     return (
       <div className="panel reject">
-        <p><strong>The compile failed its own gate.</strong> {failDetail}</p>
+        <p><strong>The compile failed its own gate.</strong> {failDetail.slice(0, 300)}</p>
         <p className="small dim">This is the product working, not breaking: a draft that
           outran its evidence was refused. Compile again for a fresh draft.</p>
         <button className="secondary" onClick={compile}>Compile again</button>
@@ -428,7 +429,8 @@ function UploadPanel({ session, guard }: { session: Session; guard: (e: unknown)
       <h2 style={{ marginTop: 0 }}>3 · Or use your own resume</h2>
       <p className="dim small">
         PDF or docx. This is personal data: it lives only in your session&apos;s tenant and is
-        deleted within 7 days. Extraction is span-anchored — every extracted fact must quote
+        deleted by the retention sweep once it is older than 7 days. Extraction is
+        span-anchored — every extracted fact must quote
         your document verbatim, and a quote that fails to anchor is stored rejected and never
         used.
       </p>

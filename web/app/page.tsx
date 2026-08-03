@@ -23,7 +23,8 @@ export default function Landing() {
       <p className="dim mono small">CareerCompiler · an AiGNITE portfolio build</p>
       <h1>A resume compiler with compile errors.</h1>
       <p>
-        Your resume is compiled from a graph of verified career facts. Every rendered
+        Your resume is compiled from a graph of career facts, each carrying its provenance
+        and its span into the source document. Every rendered
         sentence cites the facts that license it. A sentence that cites nothing, carries a
         number found in no cited fact, or claims more than its evidence supports{" "}
         <strong>fails the build</strong> — scored against the cited facts by a pinned

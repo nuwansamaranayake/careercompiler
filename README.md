@@ -11,25 +11,26 @@ evidence beside it.
 > reference-integrity linker, and an NLI entailment gate pinned by revision digest.
 > [ROADMAP.md](ROADMAP.md) shows what exists versus what is next.
 
-**A compiler, not a ghostwriter.** Your verified career facts are the source code, the job
+**A compiler, not a ghostwriter.** Your span-anchored career facts are the source code, the job
 description is the target platform, and the resume is a compiled artifact in which every sentence
 links back to evidence. A sentence that cites nothing, cites a fact that does not exist, or carries a number found in no cited fact fails the build deterministically; a sentence that claims more than its cited evidence supports is rejected by an entailment model whose threshold (0.7) sits between a measured 0.9976 for a faithful sentence and 0.0015 for an inflated one — and is not yet calibrated between those extremes. The compile error is the product.
 
 ## What it is
 
-CareerCompiler produces a resume and cover letter tailored to a specific job description, built from
-an existing resume plus a structured interview, designed so fabrication is a build failure: every
-generated sentence must cite fact IDs and pass an entailment gate (Phase 2), proven by evals that
-plant violations the gate must catch. It gives an honest fit assessment that will say "do not apply,"
-and it emits an interview-prep pack from the same evidence.
+CareerCompiler compiles a resume tailored to a specific job description from a graph of
+span-anchored career facts, designed so fabrication is a build failure: every generated
+sentence must cite fact IDs and pass an entailment gate, proven by evals that plant
+violations the gate must catch. It gives an honest fit assessment that will say "do not
+apply." Cover letters and an interview-prep pack are roadmap items, deliberately cut from
+this release ([BLOCKED.md](BLOCKED.md)).
 
-Every mainstream tool in this category works the same way: paste resume, paste JD, receive a
-rewritten document optimized for keyword coverage (the tools we reviewed as of July 2026). Two
-failure modes follow. The model inflates: a skill grazed once becomes "expert," a team of two
-becomes "led cross-functional teams," and keyword stuffing reads machine-written exactly when
-recruiters are deploying detectors to catch it. As open source, this tool serves the people who most
-need it and can least afford subscriptions: students, career changers, and job seekers anywhere,
-with a local-model mode so the most personal document a person owns never has to leave their machine.
+The common shape in this category — paste resume, paste JD, receive a rewritten document
+optimized for keyword coverage — invites two failure modes: the model inflates (a skill
+grazed once becomes "expert," a team of two becomes "led cross-functional teams"), and the
+inflated result is exactly what reads machine-written. This tool inverts the design:
+tailoring is evidence *selection* under a page budget, the renderer never sees the job
+posting, and a sentence stronger than its cited evidence does not compile. Open source, so
+the people who can least afford subscriptions can run it.
 
 ## How it works (the design)
 
@@ -108,10 +109,10 @@ features (real extraction, persistence, migrations) and therefore for the smoke 
 
 ## Demo
 
-A screenshot and GIF of the provenance map and the live compile-error moment (the linker rejecting
-"led a cross-functional team of 12" against `scope_4_engineers`) land in Phase 2 alongside the
-Next.js frontend. Until then, the synthetic `/api/v1/demo` payload is the fastest way to see the
-shape of a Career Fact Graph record.
+Open <https://careercompiler.aigniteconsulting.ai/demo/>, start a session (no sign-up),
+compile the seeded candidate, then challenge a bullet and overstate it: the linker rejects
+an invented number deterministically, and the entailment gate rejects an inflated verb with
+the score and the cited facts shown beside the sentence.
 
 ## Doctrine
 
