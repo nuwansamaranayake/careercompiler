@@ -15,6 +15,7 @@ two (Standard 3). Bearer auth on mutations and fit-report reads when SMOKE_TEST_
 from __future__ import annotations
 
 import io
+import re
 
 import sqlalchemy as sa
 from docx import Document as DocxDocument
@@ -763,12 +764,38 @@ def open_demo_session(request: Request):
             "synthetic": True, **seeded}
 
 
+def _normalize_doc_text(text: str) -> str:
+    """Layout artifacts out of the stored text, before it becomes the anchoring source.
+
+    Measured root cause (candidate 31 in production, 35 of 138 rejected): PDF extraction
+    hard-wraps lines mid-sentence ("AI-native\\nsystems in production") and doubles spaces
+    at layout gaps, while the model quotes the sentence with normal spacing — so a
+    faithful quote fails a verbatim find. The defect is extraction leaking layout into
+    text. The fix normalizes what we STORE: spaces collapsed within lines, single line
+    breaks (layout wraps) joined with a space, blank-line paragraph boundaries kept.
+    The anchor check itself stays byte-verbatim against this stored text — the gate is
+    not loosened, the source is made faithful to the document's sentences."""
+    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in text.replace("\r", "").split("\n")]
+    paras: list[str] = []
+    cur: list[str] = []
+    for ln in lines:
+        if ln:
+            cur.append(ln)
+        elif cur:
+            paras.append(" ".join(cur))
+            cur = []
+    if cur:
+        paras.append(" ".join(cur))
+    return "\n".join(paras)
+
+
 @router.post("/candidates/upload", status_code=201)
 async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
                            authorization: str | None = Header(default=None)):
-    """Resume upload, PDF or docx (E5). Text is extracted server-side and stored as the
-    source document; span anchoring during claim extraction then works against exactly
-    this text, and a quote that fails to anchor is stored rejected and never matches."""
+    """Resume upload, PDF or docx (E5). Text is extracted server-side, normalized of
+    layout artifacts, and stored as the source document; span anchoring during claim
+    extraction then works against exactly this text, and a quote that fails to anchor
+    is stored rejected and never matches."""
     scope = _auth(authorization)
     data = await file.read()
     if len(data) > 2_000_000:
@@ -788,6 +815,7 @@ async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
     except Exception:
         raise HTTPException(status_code=422,
                             detail="the file could not be parsed as PDF or docx")
+    text = _normalize_doc_text(text)
     if not text.strip():
         raise HTTPException(status_code=422,
                             detail="no extractable text in the document; a scanned image "
