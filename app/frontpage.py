@@ -21,14 +21,15 @@ def _template() -> str:
 
 
 def build_version() -> str:
-    """The one place the application's version comes from.
+    """Delegates to groundwork.build_version — the estate-wide single source (A1/A2).
 
     Both the front page and the OpenAPI schema read this. They previously did not: the page
     read APP_VERSION while FastAPI fell back to its own default, so the deployed schema
     announced 0.1.0 against a 0.2.3 tag. A schema that is wrong about its own version has not
     earned trust about anything else in it.
     """
-    return os.getenv("APP_VERSION", "unreleased")
+    from groundwork import build_version as _shared
+    return _shared()
 
 
 def render() -> str:

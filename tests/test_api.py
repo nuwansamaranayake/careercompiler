@@ -203,3 +203,9 @@ def test_build_version_is_read_from_the_environment(monkeypatch):
     assert frontpage.build_version() == "9.9.9-test"
     monkeypatch.delenv("APP_VERSION")
     assert frontpage.build_version() == "unreleased"
+
+
+def test_shared_version_assertion_holds(client):
+    """A3: the estate-wide check, via the shared helper rather than a drifting copy."""
+    from groundwork.testing import assert_served_version_matches_front_page
+    assert_served_version_matches_front_page(client)

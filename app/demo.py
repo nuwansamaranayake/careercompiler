@@ -1,37 +1,26 @@
-"""Part B: credential-less demo access that never weakens the estate invariant.
+"""Demo access for CareerCompiler, on the shared kit (groundwork.demokit).
 
-A stranger gets a scoped, short-lived, budgeted bearer token bound to a tenant prefix.
-Every server-side read stays bearer-authenticated: the demo changes who can hold a token,
-never whether one is required. Zero unauthenticated business reads remains true and is
-asserted by the estate probe.
-
-The tenant is the identifier prefix `demo-YYYYMMDDTHHMMSSZ-<6hex>-`. Every row a session
-creates carries it, which buys three properties at once: scope checks are a string
-comparison against the row the id resolves to, the estate retention sweep reclaims demo
-rows by the same prefix-match rule the monitor uses (never a bare date column), and a
-seeded row can always be told apart from a real one.
-
-Sessions live in Redis: TTL is the expiry, a counter is the request budget, and an
-IP-keyed counter rate-limits session creation. No new table, nothing to migrate, and an
-expired session disappears rather than lingering as a row.
+Session issuance, tenant prefixes, budgets, TTLs, and the tenancy guard live in groundwork
+now — extracted from this app after v0.3.1 shipped, so the next products inherit them.
+What stays here is the product-specific seed: the synthetic fact graph and the two jobs
+whose verdicts are deterministic (a clear fit, and a planted TS/SCI must-have producing the
+honest do-not-apply).
 """
 from __future__ import annotations
 
-import secrets
-from datetime import datetime, timezone
-
 import redis as redis_lib
-from fastapi import HTTPException
+from groundwork import DemoKit
 
 from . import db
 from .config import settings
+from .engine.embedding import HashingEmbedder
 from .engine.facts import claims_from_entries
 from .engine.fit import build_report
 from .engine.jd import requirements_from_entries
 from .engine.matcher import match
-from .engine.embedding import HashingEmbedder
 
 _client = None
+_kit: DemoKit | None = None
 
 
 def get_redis():
@@ -42,52 +31,27 @@ def get_redis():
 
 
 def set_redis_for_tests(client) -> None:
-    global _client
+    global _client, _kit
     _client = client
+    _kit = None
 
 
-def new_tenant_prefix(now: datetime | None = None) -> str:
-    now = now or datetime.now(timezone.utc)
-    return f"demo-{now.strftime('%Y%m%dT%H%M%S')}Z-{secrets.token_hex(3)}-"
+def kit() -> DemoKit:
+    global _kit
+    if _kit is None:
+        _kit = DemoKit(get_redis(),
+                       ttl_seconds=settings.demo_session_ttl_seconds,
+                       request_budget=settings.demo_request_budget,
+                       sessions_per_ip_hour=settings.demo_sessions_per_ip_hour)
+    return _kit
 
 
 def create_session(client_ip: str) -> tuple[str, str]:
-    """Issue a token bound to a fresh tenant prefix. Rate-limited per source address."""
-    r = get_redis()
-    ip_key = f"demo:ip:{client_ip}"
-    n = r.incr(ip_key)
-    if n == 1:
-        r.expire(ip_key, 3600)
-    if n > settings.demo_sessions_per_ip_hour:
-        raise HTTPException(
-            status_code=429,
-            detail="demo session rate limit reached for this address; try again later")
-
-    token = secrets.token_urlsafe(24)
-    prefix = new_tenant_prefix()
-    key = f"demo:{token}"
-    r.hset(key, mapping={"prefix": prefix, "used": 0})
-    r.expire(key, settings.demo_session_ttl_seconds)
-    return token, prefix
+    return kit().create_session(client_ip)
 
 
 def check_session(token: str) -> str | None:
-    """The tenant prefix for a live demo token, None when the token is not a demo session.
-
-    Expiry needs no code path of its own: Redis drops the key and the token stops resolving,
-    which the caller turns into the same 401 as any other bad bearer. The budget is a
-    counter, not a clock — a session that spends its requests is done even if time remains.
-    """
-    r = get_redis()
-    key = f"demo:{token}"
-    if not r.exists(key):
-        return None
-    used = r.hincrby(key, "used", 1)
-    if used > settings.demo_request_budget:
-        raise HTTPException(
-            status_code=429,
-            detail="demo request budget exhausted; open a new session")
-    return r.hget(key, "prefix")
+    return kit().check_session(token)
 
 
 # --------------------------------------------------------------------------- seed (B3)

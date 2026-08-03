@@ -10,46 +10,14 @@ import pytest
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 
+from groundwork.testing import FakeRedis
+
 from app import db, demo
 from app.config import settings
 from app.main import app
 
 TOKEN = "estate-token"
 H = {"Authorization": f"Bearer {TOKEN}"}
-
-
-class FakeRedis:
-    """The slice of redis the demo module uses, with a manual expiry lever for tests."""
-
-    def __init__(self):
-        self.store: dict[str, dict] = {}
-        self.counters: dict[str, int] = {}
-
-    def hset(self, key, mapping):
-        self.store.setdefault(key, {}).update(
-            {k: str(v) for k, v in mapping.items()})
-
-    def hget(self, key, field):
-        return self.store.get(key, {}).get(field)
-
-    def hincrby(self, key, field, n):
-        v = int(self.store.setdefault(key, {}).get(field, 0)) + n
-        self.store[key][field] = str(v)
-        return v
-
-    def exists(self, key):
-        return 1 if key in self.store else 0
-
-    def incr(self, key):
-        self.counters[key] = self.counters.get(key, 0) + 1
-        return self.counters[key]
-
-    def expire(self, key, ttl):
-        return True
-
-    def expire_now(self, key):
-        """What Redis does at TTL, done on demand."""
-        self.store.pop(key, None)
 
 
 @pytest.fixture()

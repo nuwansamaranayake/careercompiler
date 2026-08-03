@@ -24,6 +24,8 @@ from pypdf import PdfReader
 from groundwork import BaseConfig, LLMGateway
 from pydantic import BaseModel, Field
 
+from groundwork import DemoRefused, ScopeDenied, guard_prefix
+
 from . import db, demo
 from .config import settings
 from .engine import entailment, linker
@@ -54,7 +56,10 @@ def _auth(authorization: str | None) -> str | None:
     if token and raw == token:
         return None
     if raw:
-        scope = demo.check_session(raw)
+        try:
+            scope = demo.check_session(raw)
+        except DemoRefused as e:
+            raise HTTPException(status_code=e.status_code, detail=e.detail)
         if scope:
             return scope
     if token:
@@ -66,18 +71,17 @@ def _guard(s, scope: str | None, *, candidate_id=None, job_id=None) -> None:
     """Tenancy: a demo token touches only rows whose root identifier carries its prefix."""
     if scope is None:
         return
-    denied = HTTPException(status_code=403,
-                           detail="this demo session cannot access that resource")
-    if candidate_id is not None:
-        row = s.execute(sa.select(db.candidates.c.name)
-                        .where(db.candidates.c.id == candidate_id)).first()
-        if row is None or not row.name.startswith(scope):
-            raise denied
-    if job_id is not None:
-        row = s.execute(sa.select(db.job_postings.c.title)
-                        .where(db.job_postings.c.id == job_id)).first()
-        if row is None or not row.title.startswith(scope):
-            raise denied
+    try:
+        if candidate_id is not None:
+            row = s.execute(sa.select(db.candidates.c.name)
+                            .where(db.candidates.c.id == candidate_id)).first()
+            guard_prefix(scope, row.name if row else None)
+        if job_id is not None:
+            row = s.execute(sa.select(db.job_postings.c.title)
+                            .where(db.job_postings.c.id == job_id)).first()
+            guard_prefix(scope, row.title if row else None)
+    except ScopeDenied as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 
 def _gateway() -> LLMGateway:
@@ -546,7 +550,10 @@ def open_demo_session(request: Request):
     forwarded = request.headers.get("x-forwarded-for") or ""
     ip = (forwarded.split(",")[0].strip()
           or (request.client.host if request.client else "unknown"))
-    token, prefix = demo.create_session(ip)
+    try:
+        token, prefix = demo.create_session(ip)
+    except DemoRefused as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     with db.get_session() as s, s.begin():
         seeded = demo.seed_tenant(s, prefix, _store_claims)
     return {"token": token, "token_type": "bearer",
