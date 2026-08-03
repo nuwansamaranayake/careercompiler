@@ -100,6 +100,9 @@ compiled_documents = sa.Table(
     sa.Column("id", sa.Integer, primary_key=True),
     sa.Column("candidate_id", sa.Integer, sa.ForeignKey("candidates.id"), nullable=False),
     sa.Column("job_id", sa.Integer, sa.ForeignKey("job_postings.id"), nullable=False),
+    # 'resume' or 'cover_letter': both are gated documents in the same tables; the kind
+    # only changes how the docx is framed, never what the gates require.
+    sa.Column("kind", sa.Text, nullable=False, server_default="resume"),
     sa.Column("budget_lines", sa.Integer, nullable=False),
     sa.Column("used_lines", sa.Integer, nullable=False),
     sa.Column("nli_model", sa.Text, nullable=False),

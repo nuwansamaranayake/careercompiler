@@ -124,3 +124,11 @@ Selection (which facts make the page, under the budget) is where tailoring happe
 is deterministic. The renderer restates the chosen facts faithfully; wording does not
 shift per job. A reviewer who expects per-job rephrasing must not be surprised, so the
 demo page says this in plain text (E8). The honest version of "tailored" is "selected."
+
+**The cover-letter exception (2026-08-03):** a letter is addressed to a specific role, so
+it may reference the job directly — but only in the deterministic frame (greeting, role
+line, closing), which is template text that claims nothing about the candidate. The
+model still writes only evidence sentences under the same payload separation, and every
+one passes the same linker and entailment gate as a resume bullet. The exception is in
+where the role may be named, never in what may be claimed. Stated in the UI beside both
+documents.

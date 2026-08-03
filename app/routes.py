@@ -29,15 +29,16 @@ from groundwork import DemoRefused, ScopeDenied, guard_prefix
 from . import db, demo
 from .config import settings
 from .engine import entailment, linker
-from .engine.docx_out import render_docx
+from .engine.docx_out import letter_scaffold, render_docx, render_letter_docx
 from .engine.embedding import HashingEmbedder, OpenRouterEmbedder
 from .engine.entailment import EntailmentUnavailable
 from .engine.facts import AtomicClaim, claims_from_entries, extract_facts
 from .engine.fit import build_report
+from .engine.interview import draft_questions, metrics_of, render_pack_docx
 from .engine.jd import parse_jd, requirements_from_entries, Requirement
 from .engine.linker import Bullet
 from .engine.matcher import match
-from .engine.renderer import draft_bullets
+from .engine.renderer import draft_bullets, draft_letter
 from .engine.selector import Omission, OmissionReason, select
 
 router = APIRouter(prefix="/api/v1")
@@ -421,7 +422,7 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
     scores = dict(rep.scored)
     with db.get_session() as s, s.begin():
         did = s.execute(db.compiled_documents.insert().values(
-            candidate_id=body.candidate_id, job_id=body.job_id,
+            candidate_id=body.candidate_id, job_id=body.job_id, kind="resume",
             budget_lines=sel.budget_lines, used_lines=sel.used_lines,
             nli_model=settings.nli_model, nli_revision=settings.nli_model_revision,
             nli_threshold=settings.nli_entail_threshold)).inserted_primary_key[0]
@@ -441,6 +442,103 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
                          "detail": o.detail} for o in sel.omitted],
             "covered_must": sel.covered_must, "uncovered_must": sel.uncovered_must,
             "used_lines": sel.used_lines, "budget_lines": sel.budget_lines,
+            "gate": {"model": settings.nli_model,
+                     "revision": settings.nli_model_revision,
+                     "threshold": settings.nli_entail_threshold}}
+
+
+class CoverLetterIn(BaseModel):
+    candidate_id: int
+    job_id: int
+    budget_lines: int = Field(default=6, ge=1, le=12)
+    embedder: str = Field(default="hashing", pattern="^(hashing|openrouter)$")
+
+
+@router.post("/cover-letter", status_code=201)
+def compile_cover_letter(body: CoverLetterIn,
+                         authorization: str | None = Header(default=None)):
+    """The cover letter: same pipeline, same gates, letter voice.
+
+    A letter is where fabrication is most tempting and least checked, so it gets exactly
+    the resume's checks: selector chooses the evidence, the model restates it in first
+    person, the linker enforces reference integrity, the entailment gate rejects any
+    sentence stronger than its cited facts. The job-referential frame (greeting, role
+    line, closing) is deterministic template text — it references the role and says
+    nothing about the candidate, so nothing in it needs a gate or could use one."""
+    scope = _auth(authorization)
+    with db.get_session() as s:
+        _guard(s, scope, candidate_id=body.candidate_id, job_id=body.job_id)
+        claims = _load_claims(s, body.candidate_id)
+        if not claims:
+            raise HTTPException(status_code=422, detail="candidate has no claims")
+        job = s.execute(sa.select(db.job_postings)
+                        .where(db.job_postings.c.id == body.job_id)).first()
+        if job is None:
+            raise HTTPException(status_code=404, detail="job not found")
+        reqs = _load_reqs(s, body.job_id)
+        if not reqs:
+            raise HTTPException(status_code=422, detail="job has no requirements")
+        cand = s.execute(sa.select(db.candidates.c.name)
+                         .where(db.candidates.c.id == body.candidate_id)).first()
+
+    gateway = _gateway()
+    rows = match(reqs, claims, _embedder(body.embedder))
+    sel = select(claims, reqs, rows, body.budget_lines)
+    if not sel.selected:
+        raise HTTPException(status_code=422, detail=_gate_detail(
+            "empty_selection",
+            [{"reason": o.reason.value, "claim_key": o.claim_key, "detail": o.detail}
+             for o in sel.omitted]))
+
+    chosen = [c for c in claims if c.core.claim_id in set(sel.selected)]
+    sentences = draft_letter(gateway, settings.llm_model_reasoning, chosen,
+                             job.title, reqs)
+    if not sentences:
+        raise HTTPException(status_code=502,
+                            detail="the renderer returned no sentences to gate")
+
+    link = linker.check(sentences, claims, selected_ids=sel.selected)
+    if not link.ok:
+        raise HTTPException(status_code=422, detail=_gate_detail(
+            "reference_integrity",
+            [{"bullet": v.bullet_index, "text": v.text, "failure": v.failure.value,
+              "detail": v.detail} for v in link.violations]))
+
+    try:
+        rep = entailment.gate(sentences, claims, settings.nli_entail_threshold,
+                              settings.nli_model, settings.nli_model_revision)
+    except EntailmentUnavailable as e:
+        raise HTTPException(status_code=503,
+                            detail={"error": "entailment_unavailable", "message": str(e)})
+    if not rep.ok:
+        raise HTTPException(status_code=422, detail=_gate_detail(
+            "entailment",
+            [{"bullet": v.bullet_index, "text": v.text, "entailment": v.entailment,
+              "threshold": v.threshold, "premise": v.premise, "detail": v.detail}
+             for v in rep.violations]))
+
+    scores = dict(rep.scored)
+    with db.get_session() as s, s.begin():
+        did = s.execute(db.compiled_documents.insert().values(
+            candidate_id=body.candidate_id, job_id=body.job_id, kind="cover_letter",
+            budget_lines=sel.budget_lines, used_lines=sel.used_lines,
+            nli_model=settings.nli_model, nli_revision=settings.nli_model_revision,
+            nli_threshold=settings.nli_entail_threshold)).inserted_primary_key[0]
+        for i, b in enumerate(sentences):
+            s.execute(db.rendered_bullets.insert().values(
+                document_id=did, position=i, text=b.text, cites=b.cites,
+                entailment=scores.get(i)))
+        for o in sel.omitted:
+            s.execute(db.selection_omissions.insert().values(
+                document_id=did, claim_id=o.claim_id, claim_key=o.claim_key,
+                reason=o.reason.value, detail=o.detail))
+
+    frame = letter_scaffold(cand.name if cand else "unknown", job.title)
+    return {"document_id": did, "kind": "cover_letter", **frame,
+            "sentences": [{"position": i, "text": b.text, "cites": b.cites,
+                           "entailment": scores.get(i)} for i, b in enumerate(sentences)],
+            "omitted": [{"claim_key": o.claim_key, "reason": o.reason.value,
+                         "detail": o.detail} for o in sel.omitted],
             "gate": {"model": settings.nli_model,
                      "revision": settings.nli_model_revision,
                      "threshold": settings.nli_entail_threshold}}
@@ -489,22 +587,33 @@ def get_compiled_docx(did: int, authorization: str | None = Header(default=None)
                          .where(db.candidates.c.id == doc["candidate_id"])).first()
         job = s.execute(sa.select(db.job_postings.c.title)
                         .where(db.job_postings.c.id == doc["job_id"])).first()
-    payload = render_docx(
-        candidate_name=cand.name if cand else "unknown",
-        job_title=job.title if job else "unknown",
-        bullets=[dict(b) for b in bullets],
-        claims_by_id=claims,
-        omissions=[Omission(o["claim_id"], o["claim_key"],
-                            OmissionReason(o["reason"]), o["detail"])
-                   for o in omissions],
-        entailment_note=(f"NLI {doc['nli_model']}@{doc['nli_revision'][:12]}, "
-                         f"threshold {doc['nli_threshold']}"))
+    note = (f"NLI {doc['nli_model']}@{doc['nli_revision'][:12]}, "
+            f"threshold {doc['nli_threshold']}")
+    if doc.get("kind") == "cover_letter":
+        payload = render_letter_docx(
+            candidate_name=cand.name if cand else "unknown",
+            job_title=job.title if job else "unknown",
+            sentences=[dict(b) for b in bullets],
+            claims_by_id=claims,
+            entailment_note=note)
+        stem = "careercompiler-letter"
+    else:
+        payload = render_docx(
+            candidate_name=cand.name if cand else "unknown",
+            job_title=job.title if job else "unknown",
+            bullets=[dict(b) for b in bullets],
+            claims_by_id=claims,
+            omissions=[Omission(o["claim_id"], o["claim_key"],
+                                OmissionReason(o["reason"]), o["detail"])
+                       for o in omissions],
+            entailment_note=note)
+        stem = "careercompiler"
     return Response(
         content=payload,
         media_type=("application/vnd.openxmlformats-officedocument"
                     ".wordprocessingml.document"),
         headers={"Content-Disposition":
-                 f'attachment; filename="careercompiler-{did}.docx"'})
+                 f'attachment; filename="{stem}-{did}.docx"'})
 
 
 @router.post("/compile/check")
@@ -541,6 +650,93 @@ def check_bullet(body: CheckIn, authorization: str | None = Header(default=None)
     return {"ok": link.ok and bool(entail.get("ok", False)),
             "reference_integrity": {"ok": link.ok, "violations": link_violations},
             "entailment": entail}
+
+
+class InterviewPackIn(BaseModel):
+    document_id: int
+    format: str = Field(default="json", pattern="^(json|docx)$")
+
+
+@router.post("/interview-pack", status_code=201)
+def build_interview_pack(body: InterviewPackIn,
+                         authorization: str | None = Header(default=None)):
+    """The interview pack, from gate-survivors only.
+
+    Everything that asserts is deterministic: the story is the cited fact statements
+    verbatim with provenance, the metrics are the numbers those statements carry, the
+    gaps and the case against come from the stored fit report. The model's only
+    authority is interrogative — the skeptical questions — and every question ships
+    beside the facts that bound its honest answer. Stateless: nothing persists, and a
+    docx request regenerates the questions."""
+    scope = _auth(authorization)
+    with db.get_session() as s:
+        doc, bullets, _ = _load_document(s, body.document_id)
+        _guard(s, scope, candidate_id=doc["candidate_id"])
+        claims = {c.core.claim_id: c for c in _load_claims(s, doc["candidate_id"])}
+        cand = s.execute(sa.select(db.candidates.c.name)
+                         .where(db.candidates.c.id == doc["candidate_id"])).first()
+        job = s.execute(sa.select(db.job_postings.c.title)
+                        .where(db.job_postings.c.id == doc["job_id"])).first()
+        rep = s.execute(sa.select(db.fit_reports)
+                        .where(db.fit_reports.c.candidate_id == doc["candidate_id"],
+                               db.fit_reports.c.job_id == doc["job_id"])
+                        .order_by(db.fit_reports.c.id.desc())).mappings().first()
+        gap_rows = []
+        if rep is not None:
+            gap_rows = s.execute(
+                sa.select(db.match_scores)
+                .where(db.match_scores.c.fit_report_id == rep["id"],
+                       db.match_scores.c.status != "matched")).mappings().all()
+
+    job_title = job.title if job else "unknown"
+    b_items, entries = [], []
+    for b in bullets:
+        facts = [claims[cid] for cid in b["cites"] if cid in claims]
+        statements = [f.core.statement for f in facts]
+        b_items.append({"id": f"B{b['position'] + 1}", "text": b["text"],
+                        "facts": statements})
+        entries.append({
+            "id": f"B{b['position'] + 1}", "text": b["text"],
+            "facts": [{"key": f.claim_key, "statement": f.core.statement,
+                       "provenance": f.provenance.value} for f in facts],
+            "metrics": metrics_of(statements)})
+    g_items, gap_entries = [], []
+    for i, g in enumerate(gap_rows):
+        case = g["explanation"] or "no evidence in the fact graph"
+        g_items.append({"id": f"G{i + 1}", "requirement": g["req_key"], "case": case})
+        gap_entries.append({"id": f"G{i + 1}", "requirement": g["req_key"],
+                            "case": case, "status": g["status"],
+                            "must_have": g["must_have"]})
+
+    gateway = _gateway()
+    questions = draft_questions(gateway, settings.llm_model_reasoning, job_title,
+                                b_items, g_items)
+    for e in entries:
+        e["questions"] = questions.get(e.pop("id"), [])
+    for g in gap_entries:
+        g["questions"] = questions.get(g.pop("id"), [])
+
+    note = ("Built only from facts that survived the compile gates. Questions are "
+            "generated; the facts beside them are the boundary every honest answer "
+            "must respect. Nothing here licenses a claim the resume could not support.")
+    verdict = rep["verdict"] if rep is not None else "unknown"
+    case_against = rep["case_against"] if rep is not None else None
+
+    if body.format == "docx":
+        payload = render_pack_docx(
+            candidate_name=cand.name if cand else "unknown", job_title=job_title,
+            verdict=verdict, case_against=case_against, entries=entries,
+            gap_entries=gap_entries, note=note)
+        return Response(
+            content=payload, status_code=201,
+            media_type=("application/vnd.openxmlformats-officedocument"
+                        ".wordprocessingml.document"),
+            headers={"Content-Disposition":
+                     f'attachment; filename="careercompiler-prep-{body.document_id}.docx"'})
+
+    return {"document_id": body.document_id, "job_title": job_title,
+            "verdict": verdict, "case_against": case_against,
+            "note": note, "bullets": entries, "gaps": gap_entries}
 
 
 # --------------------------------------------------------------------------- demo (Part B)

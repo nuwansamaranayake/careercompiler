@@ -373,7 +373,224 @@ function CompilePanel({ session, jobId, candidateId, guard }: {
         <button className="secondary" onClick={compile}>Compile again</button>
       </div>
     );
-  return doc ? <CompiledView doc={doc} prov={prov} session={session} guard={guard} /> : null;
+  return doc ? (
+    <>
+      <CompiledView doc={doc} prov={prov} session={session} guard={guard} />
+      <LetterPanel session={session} jobId={jobId} candidateId={candidateId} guard={guard} />
+      <PackPanel session={session} documentId={doc.document_id} guard={guard} />
+    </>
+  ) : null;
+}
+
+type Pack = {
+  document_id: number; job_title: string; verdict: string; case_against: string | null;
+  note: string;
+  bullets: { text: string; facts: { key: string; statement: string; provenance: string }[];
+             metrics: string[]; questions: string[] }[];
+  gaps: { requirement: string; case: string; status: string; must_have: boolean;
+          questions: string[] }[];
+};
+
+function PackPanel({ session, documentId, guard }: {
+  session: Session; documentId: number; guard: (e: unknown) => string;
+}) {
+  const [state, setState] = useState<"idle" | "run" | "done">("idle");
+  const [pack, setPack] = useState<Pack | null>(null);
+  const [msg, setMsg] = useState("");
+  const [dlMsg, setDlMsg] = useState("");
+
+  const build = async () => {
+    setState("run"); setMsg("");
+    try {
+      const d = await api<Pack>(session.token, "/api/v1/interview-pack", {
+        method: "POST", body: JSON.stringify({ document_id: documentId }) });
+      setPack(d); setState("done");
+    } catch (e) { setMsg(guard(e)); setState("idle"); }
+  };
+
+  const download = async () => {
+    try {
+      const r = await fetch("/api/v1/interview-pack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   Authorization: `Bearer ${session.token}` },
+        body: JSON.stringify({ document_id: documentId, format: "docx" }) });
+      if (!r.ok) { setDlMsg(`download failed: HTTP ${r.status}`); return; }
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `careercompiler-prep-${documentId}.docx`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { setDlMsg(friendly(e)); }
+  };
+
+  if (state === "idle")
+    return <p style={{ marginTop: "1.2rem" }}>
+      <button onClick={build}>Build the interview pack</button>{" "}
+      <span className="dim small">the story, the metrics, and the skeptical questions —
+      built only from facts that survived the gate, gaps included</span>
+      {msg && <span className="err small"> {msg}</span>}</p>;
+  if (state === "run")
+    return <p className="dim"><span className="spin">◌</span> Building the pack — the
+      facts and gaps are assembled from stored rows; the model writes only the questions.</p>;
+  if (!pack) return null;
+  return (
+    <>
+      <h2 style={{ marginTop: "1.4rem" }}>Interview preparation</h2>
+      <p className="dim small">{pack.note}</p>
+      {pack.bullets.map((b, i) => (
+        <div className="bullet" key={i}>
+          <p style={{ margin: 0 }}><strong>{b.text}</strong></p>
+          <div className="small" style={{ margin: "0.3rem 0 0 1rem" }}>
+            {b.facts.map((f, j) => (
+              <p key={j} style={{ margin: "0.15rem 0" }}>
+                <code>{f.key}</code> — {f.statement}{" "}
+                <span className="dim">({f.provenance})</span>
+              </p>
+            ))}
+            <p className="dim" style={{ margin: "0.15rem 0" }}>
+              metrics in the evidence:{" "}
+              {b.metrics.length ? b.metrics.join(", ")
+                : "none — the facts carry no number, so neither may your answer"}
+            </p>
+            {b.questions.length
+              ? b.questions.map((q, j) => <p key={j} style={{ margin: "0.15rem 0" }}>❓ {q}</p>)
+              : <p className="dim" style={{ margin: "0.15rem 0" }}>no questions generated for this bullet</p>}
+          </div>
+        </div>
+      ))}
+      <h2>The gaps — where you will be probed</h2>
+      {pack.case_against && (
+        <p className="small err"><strong>The fit report&apos;s case against applying:</strong>{" "}
+          {pack.case_against}</p>
+      )}
+      {pack.gaps.length === 0 && (
+        <p className="small dim">The fit report found no unmatched requirements.</p>
+      )}
+      {pack.gaps.map((g, i) => (
+        <div className="bullet" key={i}>
+          <p style={{ margin: 0 }}>
+            <code>{g.requirement}</code>{g.must_have ? " *" : ""}{" "}
+            <span className={`chip ${g.status === "gap" ? "bad" : ""}`}>{g.status}</span>{" "}
+            <span className="small dim">{g.case}</span>
+          </p>
+          <div className="small" style={{ margin: "0.3rem 0 0 1rem" }}>
+            {g.questions.map((q, j) => <p key={j} style={{ margin: "0.15rem 0" }}>❓ {q}</p>)}
+            <p className="dim" style={{ margin: "0.15rem 0" }}>
+              Prepare the honest answer: name the gap, name your nearest real experience
+              from the evidence above, and say how you would close it.
+            </p>
+          </div>
+        </div>
+      ))}
+      <p><button onClick={download}>Download the prep docx</button></p>
+      {dlMsg && <p className="err small">{dlMsg}</p>}
+    </>
+  );
+}
+
+type Letter = {
+  document_id: number; kind: string;
+  greeting: string; opening: string; closing: string; signoff: string;
+  sentences: Bullet[];
+  omitted: { claim_key: string; reason: string; detail: string }[];
+  gate: { model: string; revision: string; threshold: number };
+};
+
+function LetterPanel({ session, jobId, candidateId, guard }: {
+  session: Session; jobId: number; candidateId: number; guard: (e: unknown) => string;
+}) {
+  const [state, setState] = useState<"idle" | "run" | "done" | "fail">("idle");
+  const [letter, setLetter] = useState<Letter | null>(null);
+  const [prov, setProv] = useState<ProvBullet[]>([]);
+  const [failDetail, setFailDetail] = useState("");
+  const [dlMsg, setDlMsg] = useState("");
+
+  const compile = async () => {
+    setState("run");
+    try {
+      const d = await api<Letter>(session.token, "/api/v1/cover-letter", {
+        method: "POST",
+        body: JSON.stringify({ candidate_id: candidateId, job_id: jobId }),
+      });
+      setLetter(d);
+      const p = await api<{ bullets: ProvBullet[] }>(
+        session.token, `/api/v1/compile/${d.document_id}`);
+      setProv(p.bullets);
+      setState("done");
+    } catch (e) {
+      const err = e as Error & { detail?: { error?: string; violations?: { detail?: string }[] } };
+      if (err.detail?.error) {
+        setFailDetail(`${err.detail.error}: ${err.detail.violations?.[0]?.detail ?? "see API response"}`);
+      } else { setFailDetail(guard(e)); }
+      setState("fail");
+    }
+  };
+
+  const download = async () => {
+    if (!letter) return;
+    try {
+      const r = await fetch(`/api/v1/compile/${letter.document_id}/docx`, {
+        headers: { Authorization: `Bearer ${session.token}` } });
+      if (!r.ok) { setDlMsg(`download failed: HTTP ${r.status}`); return; }
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `careercompiler-letter-${letter.document_id}.docx`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { setDlMsg(friendly(e)); }
+  };
+
+  if (state === "idle")
+    return <p style={{ marginTop: "1.2rem" }}>
+      <button onClick={compile}>Compile the cover letter</button>{" "}
+      <span className="dim small">same gates as the resume, letter voice — a letter is
+      where fabrication is most tempting, so it gets exactly the same checks</span></p>;
+  if (state === "run")
+    return <p className="dim"><span className="spin">◌</span> Compiling the letter — the
+      model restates your facts in first person; both gates check every sentence.</p>;
+  if (state === "fail")
+    return (
+      <div className="panel reject">
+        <p><strong>The letter failed its own gate.</strong> {failDetail.slice(0, 300)}</p>
+        <p className="small dim">A sentence outran the cited evidence and was refused —
+          on a cover letter, exactly where it matters most. Compile again for a fresh draft.</p>
+        <button className="secondary" onClick={compile}>Compile again</button>
+      </div>
+    );
+  if (!letter) return null;
+  return (
+    <>
+      <h2 style={{ marginTop: "1.4rem" }}>The cover letter</h2>
+      <p className="dim small">
+        The greeting, the role line, and the closing are fixed template text: they may name
+        the role because they claim nothing about you. The model wrote only the evidence
+        sentences — each cites its facts and passed the {letter.gate.threshold} entailment
+        gate. Click one for provenance; challenge it to see the compile error.
+      </p>
+      <div className="panel">
+        <p>{letter.greeting}</p>
+        <p>{letter.opening} <span className="chip syn">template</span></p>
+        {prov.map((b) => (
+          <BulletRow key={b.position} bullet={b} session={session}
+            threshold={letter.gate.threshold} guard={guard} />
+        ))}
+        <p>{letter.closing} <span className="chip syn">template</span></p>
+        <p style={{ whiteSpace: "pre-line" }}>{letter.signoff}</p>
+      </div>
+      {letter.omitted.length > 0 && (
+        <p className="small dim">
+          Left out: {letter.omitted.map((o) => o.claim_key).join(", ")} — the letter budget
+          keeps it short; the resume carries the full evidence.
+        </p>
+      )}
+      <p><button onClick={download}>Download the letter docx</button>{" "}
+        <span className="dim small">the provenance map ships inside the document</span></p>
+      {dlMsg && <p className="err small">{dlMsg}</p>}
+    </>
+  );
 }
 
 function CompiledView({ doc, prov, session, guard }: {
@@ -401,6 +618,14 @@ function CompiledView({ doc, prov, session, guard }: {
         Gate: <code>{doc.gate.model}</code> @ <code>{doc.gate.revision.slice(0, 12)}</code>,
         threshold {doc.gate.threshold}. Click a bullet for its provenance; challenge one to
         see the compile error.
+      </p>
+      <p className="dim small">
+        <strong>How tailoring works here:</strong> the job chose which facts made this
+        page; it did not reword them. The renderer never sees the posting — steering
+        wording toward requirements produced claims the evidence did not support, so the
+        gate rejected them and we removed the steering. The cover letter below is the one
+        exception: its fixed frame may name the role, and its sentences still pass the
+        same gate.
       </p>
       {prov.map((b) => (
         <BulletRow key={b.position} bullet={b} session={session} threshold={doc.gate.threshold} guard={guard} />
