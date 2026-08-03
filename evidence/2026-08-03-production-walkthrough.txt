@@ -1,0 +1,25 @@
+# G6: the demo path walked against https://careercompiler.aigniteconsulting.ai exactly as a
+# visitor would, in a real browser, 2026-08-03 (deployed: v0.3.1, SHA 54745de).
+
+1. Landing serves: hero "A resume compiler with compile errors", EVAL.md limits block
+   verbatim including "not yet calibrated between those extremes".
+2. /demo -> "Start the demo" -> session opened with no credentials (scoped bearer, held by
+   the browser tab).
+3. Seeded verdicts, labelled synthetic: Platform Engineer = apply; Site Reliability Lead,
+   Defense Systems = do not apply, "The case against applying" naming the TS/SCI clearance
+   gap. Both "Why?" tables render per-requirement evidence.
+4. "Compile this resume" -> 5 bullets, entailment chips 0.99-1.00, gate line shows the
+   pinned model and digest: MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli @ 6f5cf0a2b59c,
+   threshold 0.7.
+5. Click bullet -> provenance facts render (claim_key + statement + provenance).
+6. REJECTION MOMENT, on production weights:
+   a. "Overstate it for me" (6 years -> 60): "Compile error. The sentence outran its
+      evidence. unsupported_number: the number '60' appears in no cited fact" — evidence
+      shown beside it.
+   b. Verb inflation typed in: "entailment 0.0007 against the 0.7 threshold ... the
+      sentence claims more than the fact" — evidence shown beside it.
+7. docx download with the session token: HTTP 200, 37430 bytes, zip magic PK. Provenance
+   ships inside the document.
+
+# Estate gate against the same host: evidence/2026-08-03-postdeploy-smoke.txt (exit 0,
+# 6 apps). B4 retention: evidence/2026-08-03-b4-retention-drill.txt (by row count).
