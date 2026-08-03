@@ -103,6 +103,21 @@ def test_auto_embedder_resolves_by_configuration(monkeypatch):
     assert isinstance(_embedder("auto"), HashingEmbedder)
 
 
+def test_an_embedder_outage_is_a_typed_503_not_a_500(client, monkeypatch):
+    """CI caught the raw version of this: a placeholder key resolved 'auto' to the
+    network embedder and /fit answered 500. An embedder outage is a typed refusal."""
+    from app.engine.embedding import EmbedderUnavailable
+    cid, jid, ids = _seed(client)
+
+    def broken_match(reqs, claims, embedder):
+        raise EmbedderUnavailable("embeddings endpoint answered 401 for model 'stub'")
+
+    monkeypatch.setattr(routes, "match", broken_match)
+    r = client.post("/api/v1/fit", json={"candidate_id": cid, "job_id": jid}, headers=H)
+    assert r.status_code == 503
+    assert r.json()["detail"]["error"] == "embedder_unavailable"
+
+
 # ------------------------------------------------------------------ loop tests (API)
 @pytest.fixture()
 def client(monkeypatch):

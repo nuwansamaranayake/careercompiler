@@ -33,7 +33,8 @@ from . import db, demo
 from .config import settings
 from .engine import entailment, linker
 from .engine.docx_out import letter_scaffold, render_docx, render_letter_docx
-from .engine.embedding import HashingEmbedder, OpenRouterEmbedder
+from .engine.embedding import (EmbedderUnavailable, HashingEmbedder,
+                               OpenRouterEmbedder)
 from .engine.entailment import EntailmentUnavailable
 from .engine.facts import AtomicClaim, claims_from_entries, extract_facts
 from .engine.fit import build_report
@@ -133,6 +134,16 @@ def _embedder(name: str):
             base_url=settings.openrouter_base_url,
         )
     return HashingEmbedder()
+
+
+def _match(reqs, claims, embedder):
+    """The matcher with its embedder failure typed: a bad key or a provider outage is a
+    503 the caller can read, never a raw 500 and never a silent hashing fallback."""
+    try:
+        return match(reqs, claims, embedder)
+    except EmbedderUnavailable as e:
+        raise HTTPException(status_code=503,
+                            detail={"error": "embedder_unavailable", "message": str(e)})
 
 
 def _store_claims(s, candidate_id: int, claims: list[AtomicClaim]) -> int:
@@ -292,7 +303,7 @@ def run_fit(body: FitIn, authorization: str | None = Header(default=None)):
             raise HTTPException(status_code=422, detail="job has no requirements")
         reqs = [Requirement.model_validate(
             {k: r[k] for k in ("req_key", "text", "kind", "must_have")}) for r in req_rows]
-        rows = match(reqs, claims, embedder)
+        rows = _match(reqs, claims, embedder)
         report = build_report(rows)
         rid = s.execute(db.fit_reports.insert().values(
             candidate_id=body.candidate_id, job_id=body.job_id, verdict=report.verdict,
@@ -555,7 +566,7 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
             raise HTTPException(status_code=422, detail="job has no requirements")
 
     gateway = _gateway()
-    rows = match(reqs, claims, _embedder(body.embedder))
+    rows = _match(reqs, claims, _embedder(body.embedder))
     budget = body.budget_lines or settings.compile_budget_lines
     sel = select(claims, reqs, rows, budget)
     if not sel.selected:
@@ -630,7 +641,7 @@ def compile_cover_letter(body: CoverLetterIn,
                          .where(db.candidates.c.id == body.candidate_id)).first()
 
     gateway = _gateway()
-    rows = match(reqs, claims, _embedder(body.embedder))
+    rows = _match(reqs, claims, _embedder(body.embedder))
     sel = select(claims, reqs, rows, body.budget_lines)
     if not sel.selected:
         raise HTTPException(status_code=422, detail=_gate_detail(

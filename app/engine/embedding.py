@@ -22,6 +22,13 @@ class Embedder(Protocol):
     def embed(self, texts: list[str]) -> list[list[float]]: ...
 
 
+class EmbedderUnavailable(RuntimeError):
+    """The semantic embedder cannot answer (bad key, provider outage, malformed
+    response). Fails loud with a type — never a silent hashing fallback (Standard 3),
+    never a raw 500. Observed live: CI's .env.example carried a placeholder key, `auto`
+    resolved to openrouter, and /fit answered 500 with no diagnosis."""
+
+
 class HashingEmbedder:
     """Deterministic bag-of-hashed-tokens vectors. No network, no key, no drift."""
 
@@ -60,15 +67,24 @@ class OpenRouterEmbedder:
         self._url = base_url.rstrip("/") + "/embeddings"
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        r = httpx.post(
-            self._url,
-            headers={"Authorization": f"Bearer {self._key}"},
-            json={"model": self._model, "input": texts},
-            timeout=60,
-        )
-        r.raise_for_status()
-        data = sorted(r.json()["data"], key=lambda d: d["index"])
-        return [d["embedding"] for d in data]
+        try:
+            r = httpx.post(
+                self._url,
+                headers={"Authorization": f"Bearer {self._key}"},
+                json={"model": self._model, "input": texts},
+                timeout=60,
+            )
+            r.raise_for_status()
+            data = sorted(r.json()["data"], key=lambda d: d["index"])
+            return [d["embedding"] for d in data]
+        except httpx.HTTPStatusError as e:
+            raise EmbedderUnavailable(
+                f"embeddings endpoint answered {e.response.status_code} for model "
+                f"{self._model!r}") from e
+        except (httpx.HTTPError, KeyError, ValueError) as e:
+            raise EmbedderUnavailable(
+                f"embeddings call failed for model {self._model!r}: "
+                f"{type(e).__name__}") from e
 
 
 def cosine(a: list[float], b: list[float]) -> float:
