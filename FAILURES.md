@@ -268,10 +268,21 @@ threshold — a CSS-in-JS requirement "matched" a retrieval-architecture skill f
 Genuine matches score 0.9+; the garbage sat at 0.49–0.68 and still cleared. The same
 default fed the compile selector's targeting.
 
-**Fix:** embedder `auto` (now the default for /fit, /compile, /cover-letter): real
-embeddings whenever OPENROUTER_API_KEY + EMBEDDING_MODEL are configured — which
-production sets — hashing only on the keyless path, and the resolved name is carried
-in the response and the stored fit report, so no request is silently downgraded.
-Re-measured on the same pairing after the fix: the false must-haves gap out and the
-verdict flips to do-not-apply (recorded in EVAL.md aggregates). The matcher's
-threshold and the compile gates are untouched.
+**Fix, and what re-measurement actually showed:** embedder `auto` (now the default for
+/fit, /compile, /cover-letter): real embeddings whenever OPENROUTER_API_KEY +
+EMBEDDING_MODEL are configured — which production sets — hashing only on the keyless
+path, the resolved name carried in the response and the stored report, so no request
+is silently downgraded. **The re-measurement then falsified the expected flip**: with
+real embeddings the same pairing STILL matched 6/6, because two further holes carry
+the false matches (both measured, recorded same date):
+1. `key_overlap` let category nouns bridge unrelated skills ("architecture" linked a
+   CSS-in-JS requirement to a RAG-architecture fact; "certification" linked WCAG to an
+   unrelated AI certification). Fixed: the measured offenders joined the matcher's
+   generic-token guard, golden eval as the regression gate.
+2. `DIRECT_SIM=0.55` was tuned on the hashing embedder under the comment "real
+   embeddings score the same or higher for genuinely related text" — the measured
+   corpus disproves the premise: real embeddings scored six UNRELATED pairs 0.62–0.86
+   (WCAG↔AI-certification 0.769). A per-embedder calibration with labeled pairs is the
+   named follow-up in BLOCKED.md; the floor was not dial-twisted overnight. Until it
+   lands, a hard-mismatch posting from an adjacent tech vocabulary can still read
+   apply — known, published, unfixed.

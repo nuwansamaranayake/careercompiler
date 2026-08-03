@@ -21,8 +21,15 @@ _STOP = {"and", "or", "of", "with", "in", "to", "the", "a", "for", "on", "at"}
 # Generic tokens may not, on their own, establish a direct key match: "development" in
 # people_development must not directly satisfy "golang development" (observed in the
 # golden eval). Specific tokens (kubernetes, postgres, rust...) carry the match.
+# Extended 2026-08-03 from measured real-corpus false matches: "architecture" bridged
+# css_in_js to a RAG-architecture fact and "certification" bridged a WCAG requirement
+# to an unrelated AI certification — category nouns, not skills. Each addition is a
+# measured offender or its direct inflection, never a guess; the golden eval is the
+# regression gate.
 _GENERIC = {"development", "engineering", "experience", "operations", "management",
-            "services", "systems", "team", "platform", "senior", "junior"}
+            "services", "systems", "team", "platform", "senior", "junior",
+            "architecture", "architectures", "certification", "certifications",
+            "certified", "testing", "framework", "frameworks"}
 
 
 def _tokens(text: str) -> set[str]:
