@@ -69,11 +69,15 @@ def _seed(client) -> tuple[int, int, list[str]]:
 def _stub_render(monkeypatch, drafts):
     """Plant the exact draft the pipeline will gate. The renderer's alias mechanics have
     their own unit test; these tests exercise select -> link -> gate -> persist, so the
-    draft is injected at the renderer seam and everything downstream is real."""
+    draft is injected at the renderer seam and everything downstream is real. The repair
+    loop's revision seam is stubbed to "no repair possible" so a planted violation still
+    reaches the gate verdict — these tests prove the gates, not the repair."""
     from app.engine.linker import Bullet
     monkeypatch.setattr(routes, "draft_bullets",
                         lambda gateway, model, claims, job_title, reqs:
                         [Bullet(d["text"], list(d["cites"])) for d in drafts])
+    monkeypatch.setattr(routes, "revise_renderings",
+                        lambda gateway, model, offending, letter=False: {})
 
 
 def test_a_faithful_compile_passes_persists_and_serves_provenance(client, monkeypatch):

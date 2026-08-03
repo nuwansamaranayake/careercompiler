@@ -15,3 +15,6 @@ data/local/
 .coverage
 # Tool-generated session checkpoints (GSD / claude-mem auto-postool hook)
 .planning/
+
+# Private real-corpus fixtures: personal data + third-party postings. Never commit.
+fixtures/private/

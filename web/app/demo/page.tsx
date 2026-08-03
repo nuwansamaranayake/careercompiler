@@ -29,6 +29,48 @@ type CheckResult = {
   entailment: { checked: boolean; ok?: boolean; score?: number | null; threshold?: number;
                 violations?: { detail: string; premise: string }[] };
 };
+/* A compile refusal after the server's own repair loop exhausted: the sentence that
+   could not be grounded, the facts it reached for, and why. Rendered as the product
+   being honest — never with a retry button, because the retrying already happened. */
+type Refusal = { sentence: string; cited: string[]; why: string; rounds: number } | null;
+
+function refusalFrom(detail: unknown): Refusal {
+  const d = detail as { error?: string; repair?: unknown[];
+    violations?: { text?: string; cited?: string[]; detail?: string;
+                   entailment?: number; threshold?: number }[] };
+  if (!d?.error || !d.violations?.length) return null;
+  const v = d.violations[0];
+  const why = v.detail
+    ?? (v.entailment != null
+        ? `the evidence supports it at ${v.entailment.toFixed(2)}, below the ${v.threshold} the gate requires`
+        : d.error);
+  return { sentence: v.text ?? "(sentence unavailable)", cited: v.cited ?? [],
+           why: why ?? d.error ?? "refused", rounds: (d.repair?.length ?? 0) + 1 };
+}
+
+function RefusalPanel({ r, what }: { r: NonNullable<Refusal>; what: string }) {
+  return (
+    <div className="panel reject">
+      <p style={{ margin: 0 }}>
+        <strong>This {what} draft was refused, after {r.rounds} attempt{r.rounds === 1 ? "" : "s"}.</strong>
+      </p>
+      <p className="small" style={{ margin: "0.4rem 0" }}>
+        The sentence that could not be grounded: <em>{r.sentence}</em>
+      </p>
+      {r.cited.length > 0 && (
+        <p className="small" style={{ margin: "0.4rem 0" }}>
+          It was reaching for: {r.cited.map((s, i) => <span key={i}><code>{s}</code>{" "}</span>)}
+        </p>
+      )}
+      <p className="small" style={{ margin: "0.4rem 0" }}>{r.why}.</p>
+      <p className="small dim" style={{ marginBottom: 0 }}>
+        The compiler re-drafted with the rejection as a constraint and still could not
+        say this honestly, so the claim was refused rather than shipped. That is the
+        product keeping its promise, not an error.
+      </p>
+    </div>
+  );
+}
 /* Which resume is driving the flow right now. The seeded synthetic candidate by default;
    an upload replaces it for every fit and compile that follows. Ids stay internal. */
 type ActiveResume = { cid: number; label: string; synthetic: boolean };
@@ -328,6 +370,7 @@ function CompilePanel({ session, jobId, candidateId, guard }: {
   const [state, setState] = useState<"idle" | "run" | "done" | "fail">("idle");
   const [doc, setDoc] = useState<Compiled | null>(null);
   const [prov, setProv] = useState<ProvBullet[]>([]);
+  const [refusal, setRefusal] = useState<Refusal>(null);
   const [failDetail, setFailDetail] = useState<string>("");
   const t0 = useRef(0);
   const [secs, setSecs] = useState(0);
@@ -349,30 +392,25 @@ function CompilePanel({ session, jobId, candidateId, guard }: {
       setProv(p.bullets);
       setState("done");
     } catch (e) {
-      const err = e as Error & { detail?: { error?: string; violations?: { detail?: string }[] } };
-      if (err.detail?.error) {
-        // A real gate rejection of the model's own draft — show it as what it is.
-        setFailDetail(`${err.detail.error}: ${err.detail.violations?.[0]?.detail ?? "see API response"}`);
-        setState("fail");
-      } else { setFailDetail(guard(e)); setState("fail"); }
+      const err = e as Error & { detail?: unknown };
+      const r = refusalFrom(err.detail);
+      setRefusal(r);
+      if (!r) setFailDetail(guard(e));
+      setState("fail");
     }
   };
 
   if (state === "idle")
     return <p><button onClick={compile}>Compile this resume</button>{" "}
-      <span className="dim small">the model phrases, two gates check; ~30 s in our measured runs</span></p>;
+      <span className="dim small">the model phrases, two gates check, and the compiler
+      repairs its own drafts; ~30 s in our measured runs</span></p>;
   if (state === "run")
     return <p className="dim"><span className="spin">◌</span> Compiling — {secs}s. Selection is
-      deterministic; phrasing and the gates take the time.</p>;
+      deterministic; phrasing, the gates, and any self-repair take the time.</p>;
   if (state === "fail")
-    return (
-      <div className="panel reject">
-        <p><strong>The compile failed its own gate.</strong> {failDetail.slice(0, 300)}</p>
-        <p className="small dim">This is the product working, not breaking: a draft that
-          outran its evidence was refused. Compile again for a fresh draft.</p>
-        <button className="secondary" onClick={compile}>Compile again</button>
-      </div>
-    );
+    return refusal
+      ? <RefusalPanel r={refusal} what="resume" />
+      : <div className="panel reject"><p style={{ margin: 0 }}>{failDetail.slice(0, 300)}</p></div>;
   return doc ? (
     <>
       <CompiledView doc={doc} prov={prov} session={session} guard={guard} />
@@ -504,6 +542,7 @@ function LetterPanel({ session, jobId, candidateId, guard }: {
   const [state, setState] = useState<"idle" | "run" | "done" | "fail">("idle");
   const [letter, setLetter] = useState<Letter | null>(null);
   const [prov, setProv] = useState<ProvBullet[]>([]);
+  const [refusal, setRefusal] = useState<Refusal>(null);
   const [failDetail, setFailDetail] = useState("");
   const [dlMsg, setDlMsg] = useState("");
 
@@ -520,10 +559,10 @@ function LetterPanel({ session, jobId, candidateId, guard }: {
       setProv(p.bullets);
       setState("done");
     } catch (e) {
-      const err = e as Error & { detail?: { error?: string; violations?: { detail?: string }[] } };
-      if (err.detail?.error) {
-        setFailDetail(`${err.detail.error}: ${err.detail.violations?.[0]?.detail ?? "see API response"}`);
-      } else { setFailDetail(guard(e)); }
+      const err = e as Error & { detail?: unknown };
+      const r = refusalFrom(err.detail);
+      setRefusal(r);
+      if (!r) setFailDetail(guard(e));
       setState("fail");
     }
   };
@@ -552,14 +591,9 @@ function LetterPanel({ session, jobId, candidateId, guard }: {
     return <p className="dim"><span className="spin">◌</span> Compiling the letter — the
       model restates your facts in first person; both gates check every sentence.</p>;
   if (state === "fail")
-    return (
-      <div className="panel reject">
-        <p><strong>The letter failed its own gate.</strong> {failDetail.slice(0, 300)}</p>
-        <p className="small dim">A sentence outran the cited evidence and was refused —
-          on a cover letter, exactly where it matters most. Compile again for a fresh draft.</p>
-        <button className="secondary" onClick={compile}>Compile again</button>
-      </div>
-    );
+    return refusal
+      ? <RefusalPanel r={refusal} what="cover letter" />
+      : <div className="panel reject"><p style={{ margin: 0 }}>{failDetail.slice(0, 300)}</p></div>;
   if (!letter) return null;
   return (
     <>

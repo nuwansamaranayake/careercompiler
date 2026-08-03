@@ -67,6 +67,9 @@ def _stub_letter(monkeypatch, drafts):
     monkeypatch.setattr(routes, "draft_letter",
                         lambda gateway, model, claims, job_title, reqs:
                         [Bullet(d["text"], list(d["cites"])) for d in drafts])
+    # Repair impossible by stub: planted violations must still reach the gate verdict.
+    monkeypatch.setattr(routes, "revise_renderings",
+                        lambda gateway, model, offending, letter=False: {})
 
 
 def test_a_faithful_letter_passes_with_frame_and_letter_docx(client, monkeypatch):

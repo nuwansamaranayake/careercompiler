@@ -15,6 +15,8 @@ two (Standard 3). Bearer auth on mutations and fit-report reads when SMOKE_TEST_
 from __future__ import annotations
 
 import io
+import json
+import logging
 import re
 
 import sqlalchemy as sa
@@ -40,6 +42,7 @@ from .engine.jd import parse_jd, requirements_from_entries, Requirement
 from .engine.linker import Bullet
 from .engine.matcher import match
 from .engine.renderer import draft_bullets, draft_letter
+from .engine.revise import numeral_violations, revise_renderings
 from .engine.selector import Omission, OmissionReason, select
 
 router = APIRouter(prefix="/api/v1")
@@ -360,6 +363,150 @@ def _gate_detail(kind: str, violations: list[dict]) -> dict:
 
 _TENANT_PREFIX = re.compile(r"^(?:demo|smoke)-\d{8}T\d{6}Z-[0-9a-f]+-")
 
+_rlog = logging.getLogger("careercompiler.repair")
+
+# The render repair loop is capped: 1 initial draft + at most 2 constrained revisions.
+# Every round is logged, so a silent loop is structurally impossible (Part 2.3).
+_MAX_RENDER_ROUNDS = 3
+
+
+def _cited_statements(bullet: Bullet, claims_by_id: dict) -> list[str]:
+    return [claims_by_id[cid].core.statement
+            for cid in bullet.cites if cid in claims_by_id]
+
+
+def _render_with_repair(gateway, claims, chosen, job_title, reqs, sel, *, letter: bool):
+    """Draft -> (numeral pre-check -> linker -> entailment) -> constrained revision, at
+    most three rounds. The gates are byte-identical to before: the pre-check only decides
+    what to tell the renderer, never what passes, and the exhaustion verdict is issued by
+    the linker and the entailment gate themselves — a draft the pre-check dislikes but
+    the gates accept SHIPS, because the gates are the authority (Part 3.4).
+
+    Returns (bullets, scores, repair_log) on success; raises the same typed HTTP errors
+    as before on failure, with the audited repair log attached."""
+    claims_by_id = {c.core.claim_id: c for c in claims}
+    drafter = draft_letter if letter else draft_bullets
+    bullets = drafter(gateway, settings.llm_model_reasoning, chosen, job_title, reqs)
+    if not bullets:
+        raise HTTPException(status_code=502,
+                            detail="the renderer returned no sentences to gate")
+    repair_log: list[dict] = []
+
+    def _entail(bs):
+        try:
+            return entailment.gate(bs, claims, settings.nli_entail_threshold,
+                                   settings.nli_model, settings.nli_model_revision)
+        except EntailmentUnavailable as e:
+            # D5 unchanged: fails loud or not at all. Never a weaker check, never a pass.
+            raise HTTPException(status_code=503,
+                                detail={"error": "entailment_unavailable",
+                                        "message": str(e)})
+
+    def _evaluate(bs):
+        """First objection wins the round. Returns ('pass', scores, None) or
+        (stage, response_violations, offending_for_revision)."""
+        pre = numeral_violations(bs, claims_by_id)
+        if pre:
+            offending = [{
+                "cites": v["cites"], "text": v["text"], "statements": v["statements"],
+                "allowed_tokens": v["allowed_tokens"],
+                "reasons": [(f"numeral(s) {', '.join(repr(t) for t in v['bad_tokens'])} "
+                             "appear in no cited fact; copy numerals exactly as the "
+                             "fact spells them")],
+            } for v in pre]
+            viols = [{"bullet": v["index"], "text": v["text"],
+                      "failure": "unsupported_number", "tokens": v["bad_tokens"],
+                      "cited": v["statements"]} for v in pre]
+            return "numeral_precheck", viols, offending
+        link = linker.check(bs, claims, selected_ids=sel.selected)
+        if not link.ok:
+            by_index: dict[int, dict] = {}
+            for v in link.violations:
+                e = by_index.setdefault(v.bullet_index, {
+                    "cites": list(bs[v.bullet_index].cites), "text": v.text,
+                    "statements": _cited_statements(bs[v.bullet_index], claims_by_id),
+                    "allowed_tokens": sorted(set().union(*(
+                        linker.numbers_in(s) for s in
+                        _cited_statements(bs[v.bullet_index], claims_by_id)), set())),
+                    "reasons": []})
+                e["reasons"].append(f"{v.failure.value}: {v.detail}")
+            viols = [{"bullet": v.bullet_index, "text": v.text,
+                      "failure": v.failure.value, "detail": v.detail,
+                      "cited": _cited_statements(bs[v.bullet_index], claims_by_id)}
+                     for v in link.violations]
+            return "reference_integrity", viols, list(by_index.values())
+        rep = _entail(bs)
+        if not rep.ok:
+            offending = [{
+                "cites": list(bs[v.bullet_index].cites), "text": v.text,
+                "statements": _cited_statements(bs[v.bullet_index], claims_by_id),
+                "allowed_tokens": None,
+                "reasons": [(f"entailment {v.entailment:.4f} is below the "
+                             f"{v.threshold} threshold: the sentence claims more than "
+                             "the cited fact states; restate the fact strictly")],
+            } for v in rep.violations]
+            viols = [{"bullet": v.bullet_index, "text": v.text,
+                      "entailment": v.entailment, "threshold": v.threshold,
+                      "premise": v.premise, "detail": v.detail,
+                      "cited": _cited_statements(bs[v.bullet_index], claims_by_id)}
+                     for v in rep.violations]
+            return "entailment", viols, offending
+        return "pass", dict(rep.scored), None
+
+    stage, payload, offending = "pass", None, None
+    for rnd in range(1, _MAX_RENDER_ROUNDS + 1):
+        stage, payload, offending = _evaluate(bullets)
+        if stage == "pass":
+            if repair_log:
+                _rlog.info("repair succeeded: %s", json.dumps(
+                    {"rounds": rnd, "letter": letter, "log": repair_log}))
+            return bullets, payload, repair_log
+        repair_log.append({"round": rnd, "stage": stage, "violations": [
+            {"text": v["text"][:140],
+             "why": v.get("detail") or ",".join(v.get("tokens", [])) or
+                    f"entailment {v.get('entailment')}"} for v in payload]})
+        _rlog.info("render rejected: %s", json.dumps(repair_log[-1]))
+        if rnd == _MAX_RENDER_ROUNDS:
+            break
+        revised = revise_renderings(gateway, settings.llm_model_reasoning, offending,
+                                    letter=letter)
+        merged, changed = [], False
+        for b in bullets:
+            cid = b.cites[0] if b.cites else None
+            if cid in revised and revised[cid] != b.text:
+                merged.append(Bullet(revised[cid], list(b.cites)))
+                changed = True
+            else:
+                merged.append(b)
+        if not changed:
+            repair_log.append({"round": rnd, "stage": "revision_unchanged",
+                               "violations": []})
+            _rlog.info("revision returned no change; stopping the loop honestly")
+            break
+        bullets = merged
+
+    # Exhausted. The authoritative gates issue the verdict on the final draft — never
+    # the pre-check (Part 3.4). If they accept what the pre-check disliked, it ships.
+    link = linker.check(bullets, claims, selected_ids=sel.selected)
+    if not link.ok:
+        raise HTTPException(status_code=422, detail={
+            **_gate_detail("reference_integrity", [
+                {"bullet": v.bullet_index, "text": v.text, "failure": v.failure.value,
+                 "detail": v.detail,
+                 "cited": _cited_statements(bullets[v.bullet_index], claims_by_id)}
+                for v in link.violations]),
+            "repair": repair_log})
+    rep = _entail(bullets)
+    if not rep.ok:
+        raise HTTPException(status_code=422, detail={
+            **_gate_detail("entailment", [
+                {"bullet": v.bullet_index, "text": v.text, "entailment": v.entailment,
+                 "threshold": v.threshold, "premise": v.premise, "detail": v.detail,
+                 "cited": _cited_statements(bullets[v.bullet_index], claims_by_id)}
+                for v in rep.violations]),
+            "repair": repair_log})
+    return bullets, dict(rep.scored), repair_log
+
 
 def _display(name: str) -> str:
     """Tenant prefixes are scoping machinery, not names. They never belong in a
@@ -405,33 +552,8 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
              for o in sel.omitted]))
 
     chosen = [c for c in claims if c.core.claim_id in set(sel.selected)]
-    bullets = draft_bullets(gateway, settings.llm_model_reasoning, chosen, job.title, reqs)
-    if not bullets:
-        raise HTTPException(status_code=502,
-                            detail="the renderer returned no bullets to gate")
-
-    link = linker.check(bullets, claims, selected_ids=sel.selected)
-    if not link.ok:
-        raise HTTPException(status_code=422, detail=_gate_detail(
-            "reference_integrity",
-            [{"bullet": v.bullet_index, "text": v.text, "failure": v.failure.value,
-              "detail": v.detail} for v in link.violations]))
-
-    try:
-        rep = entailment.gate(bullets, claims, settings.nli_entail_threshold,
-                              settings.nli_model, settings.nli_model_revision)
-    except EntailmentUnavailable as e:
-        # D5: fails loud or not at all. Never a weaker check, never a pass.
-        raise HTTPException(status_code=503,
-                            detail={"error": "entailment_unavailable", "message": str(e)})
-    if not rep.ok:
-        raise HTTPException(status_code=422, detail=_gate_detail(
-            "entailment",
-            [{"bullet": v.bullet_index, "text": v.text, "entailment": v.entailment,
-              "threshold": v.threshold, "premise": v.premise, "detail": v.detail}
-             for v in rep.violations]))
-
-    scores = dict(rep.scored)
+    bullets, scores, repair_log = _render_with_repair(
+        gateway, claims, chosen, job.title, reqs, sel, letter=False)
     with db.get_session() as s, s.begin():
         did = s.execute(db.compiled_documents.insert().values(
             candidate_id=body.candidate_id, job_id=body.job_id, kind="resume",
@@ -454,6 +576,7 @@ def compile_resume(body: CompileIn, authorization: str | None = Header(default=N
                          "detail": o.detail} for o in sel.omitted],
             "covered_must": sel.covered_must, "uncovered_must": sel.uncovered_must,
             "used_lines": sel.used_lines, "budget_lines": sel.budget_lines,
+            "repair": repair_log,
             "gate": {"model": settings.nli_model,
                      "revision": settings.nli_model_revision,
                      "threshold": settings.nli_entail_threshold}}
@@ -503,33 +626,8 @@ def compile_cover_letter(body: CoverLetterIn,
              for o in sel.omitted]))
 
     chosen = [c for c in claims if c.core.claim_id in set(sel.selected)]
-    sentences = draft_letter(gateway, settings.llm_model_reasoning, chosen,
-                             job.title, reqs)
-    if not sentences:
-        raise HTTPException(status_code=502,
-                            detail="the renderer returned no sentences to gate")
-
-    link = linker.check(sentences, claims, selected_ids=sel.selected)
-    if not link.ok:
-        raise HTTPException(status_code=422, detail=_gate_detail(
-            "reference_integrity",
-            [{"bullet": v.bullet_index, "text": v.text, "failure": v.failure.value,
-              "detail": v.detail} for v in link.violations]))
-
-    try:
-        rep = entailment.gate(sentences, claims, settings.nli_entail_threshold,
-                              settings.nli_model, settings.nli_model_revision)
-    except EntailmentUnavailable as e:
-        raise HTTPException(status_code=503,
-                            detail={"error": "entailment_unavailable", "message": str(e)})
-    if not rep.ok:
-        raise HTTPException(status_code=422, detail=_gate_detail(
-            "entailment",
-            [{"bullet": v.bullet_index, "text": v.text, "entailment": v.entailment,
-              "threshold": v.threshold, "premise": v.premise, "detail": v.detail}
-             for v in rep.violations]))
-
-    scores = dict(rep.scored)
+    sentences, scores, repair_log = _render_with_repair(
+        gateway, claims, chosen, job.title, reqs, sel, letter=True)
     with db.get_session() as s, s.begin():
         did = s.execute(db.compiled_documents.insert().values(
             candidate_id=body.candidate_id, job_id=body.job_id, kind="cover_letter",
@@ -547,7 +645,7 @@ def compile_cover_letter(body: CoverLetterIn,
 
     frame = letter_scaffold(_display(cand.name) if cand else "unknown",
                             _display(job.title))
-    return {"document_id": did, "kind": "cover_letter", **frame,
+    return {"document_id": did, "kind": "cover_letter", **frame, "repair": repair_log,
             "sentences": [{"position": i, "text": b.text, "cites": b.cites,
                            "entailment": scores.get(i)} for i, b in enumerate(sentences)],
             "omitted": [{"claim_key": o.claim_key, "reason": o.reason.value,

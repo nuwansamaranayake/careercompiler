@@ -196,3 +196,40 @@ the *diagnosed* root cause separately (Standard 5).
   fill. The durable fix is that any migration PR must touch three places in one commit:
   the alembic revision, `.env.example`, and the estate gate's App entry — recorded here
   because the next migration author will not remember this.
+
+## FAIL-0010 — The renderer re-drafted blind: same rejection, same token, forever
+
+**Reported (2026-08-03, live demonstration):** the happy-path compile failed repeatedly
+on `reference_integrity` for the token `40`, and the UI answered every failure with
+"Compile again" — handing the retry to the user with no reason attached.
+
+**Mechanism, named from code and data (not guessed):**
+1. `linker.normalise_number` keeps the percent sign, correctly: `40%` (a rate) and `40`
+   (a count) are different claims, so a fact saying "Cut deploy time 40%" licenses only
+   the token `40%`. The seeded corpus carries BOTH spellings in different facts
+   ("operating 40 services" licenses `40`; "Cut deploy time 40% at Acme Corp" licenses
+   `40%`), so any rendering of the CI fact as "by 40 percent" or "reduced deploys 40"
+   emits bare `40`, which that bullet's citation does not license → `unsupported_number
+   '40'`. The same class fires on any percentage or unit-suffixed figure in a real
+   resume ("12M" rendered "12 million" → bare `12`).
+2. The render call received **no feedback on rejection**. `temperature=0.0` plus an
+   identical prompt means the retry reproduces the same stylistic choice — the failure
+   is stable per session, which is exactly "fails repeatedly on the same token".
+   Provider nondeterminism across sessions explains why a later 20-compile run did not
+   reproduce it (see rates below).
+3. The UI then said "Compile again", making a working gate read as a broken product.
+
+**Measured baseline (2026-08-03, local stack, production-identical models, 20 compiles
+of the seeded candidate, 10 per seeded job):** 1/20 failed (5%). The one failure was
+the entailment gate, correctly: draft "Built and operated Python services in production
+**over** 6 years" vs fact "**for** 6 years", scored 0.52 against 0.70 — a stretched
+timeframe, the exact category the graded suite (EVAL.md) documents. Zero
+reference_integrity failures in this sample; the `40` class is real but intermittent,
+and dominates on real-corpus numerals (percentages, `12M`-style suffixes).
+
+**Fix (same date):** the repair loop — a deterministic numeral pre-check (linker's own
+token arithmetic, run before any gate) plus constrained re-rendering that names the
+offending token, the fact, and the exact numeral spellings the evidence licenses; cap
+3 rounds, every round logged, exhaustion verdict issued by the unchanged linker and
+entailment gates. The UI stops asking the user to retry and states which sentence was
+refused and which fact it reached for. Gates byte-identical before and after.
