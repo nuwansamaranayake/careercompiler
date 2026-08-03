@@ -233,3 +233,23 @@ offending token, the fact, and the exact numeral spellings the evidence licenses
 3 rounds, every round logged, exhaustion verdict issued by the unchanged linker and
 entailment gates. The UI stops asking the user to retry and states which sentence was
 refused and which fact it reached for. Gates byte-identical before and after.
+
+## FAIL-0011 — Name-subject facts make honest cover letters unentailable
+
+**Caught by the new demo-path gate before deploy (2026-08-03), not by a user.** The gate
+walked the visitor sequence against the local stack and the cover letter failed after
+repair exhaustion: draft "I ran Kubernetes." scored 0.018 against its cited fact.
+
+**Mechanism:** extraction sometimes writes the fact statement with the candidate's name
+as grammatical subject ("Casey Morgan ran Kubernetes.") when the name appears in the
+document. The resume renderer drops the subject ("Ran Kubernetes…"), which the NLI reads
+as the same claim — compile passed, and the repair loop's one engaged round fixed the
+rest. The letter renderer must write first person ("I ran Kubernetes."), and the NLI
+correctly reads a first-person claim against a named-third-party premise as a DIFFERENT
+person's claim — 0.02, refused, three rounds, honest exhaustion. The gate is right; the
+sensor was feeding it un-restatable atoms.
+
+**Fix at the sensor, gate untouched:** the extraction prompt now requires bare-predicate
+statements (start with the verb or noun phrase; never the candidate's name or a pronoun
+as subject). Span anchoring is unchanged — quotes still must appear verbatim in the
+source. Verified by re-running the demo-path gate end to end after the change.

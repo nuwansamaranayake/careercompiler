@@ -106,7 +106,14 @@ def extract_facts(
                          "measured outcome. claim_key is a short snake_case label (e.g. "
                          "platform_kubernetes, scope_42_services). quote is a VERBATIM "
                          "substring of the resume that evidences the claim. Never infer "
-                         "facts that are not in the text. Return JSON.")},
+                         "facts that are not in the text.\n"
+                         "statement is a BARE PREDICATE: start with the verb or noun "
+                         "phrase, never with the candidate's name or a pronoun "
+                         "('Ran Kubernetes in production', NOT 'Jane Doe ran Kubernetes' "
+                         "and NOT 'She ran Kubernetes'). A statement that names its "
+                         "subject cannot be restated in first person without changing "
+                         "its subject, and downstream verification scores that as a "
+                         "different person's claim. Return JSON.")},
             {"role": "user", "content": resume_text},
         ],
         json_schema=EXTRACTION_SCHEMA,
