@@ -1,0 +1,35 @@
+v0.4.1 deploy record — 2026-08-03 (repair loop + real-corpus run)
+
+Deployed: SHA 4720c19, tag v0.4.1 (annotated, carries the CI run URL).
+CI green on that exact SHA: https://github.com/nuwansamaranayake/careercompiler/actions/runs/30793954540
+Snapshot BEFORE first deploy attempt: Hostinger action 107469778, success 2026-08-03T06:15:39–45Z.
+Rollback assets: careercompiler-service:rollback-v031 image on host; v0.4.0 (51ca391) buildable from tag.
+
+Deploy attempts, honestly:
+1. First cutover (SHA 47bd4cf as 0.4.1): boot clean, MIGRATION OK 11 tables — but the
+   post-deploy estate run FAILED the new demo-path release gate at the cover letter:
+   "I have used Kubernetes in production." scored 0.439 against a verbless fact
+   ("Kubernetes in production"). FAIL-0013 diagnosed: the FAIL-0011 prompt allowed
+   noun-phrase statements, which assert nothing and can support no sentence. Rollback
+   was NOT taken: the pre-deploy estate run had measured the same surface broken on
+   v0.4.0 (FAIL-0011 mechanism, 0.018), so rolling back shipped an equally broken demo
+   path minus every fix. Forward-fix under a 2-cycle budget instead.
+2. Fix cycle: extraction statements must start with a verb (4720c19). CI green; the
+   local demo-path gate ran TWICE (independent extraction draws), both exit 0. Host
+   rebuilt, cutover, boot clean, MIGRATION OK 11 tables, GIT_SHA=4720c19.
+
+Release gate (the last thing run after deploy, per Part 6.3):
+- estate_smoke --ssh beacon-gom: exit 0. ALL SIX apps PASS. careercompiler row:
+  TLS valid, health 200, prod-guard 503, tables 11/11, planted inflation + planted
+  invented number REJECTED in production, no-token 401x3, demo cross-tenant 403,
+  and THE DEMO-PATH GATE (session, upload, extract, paste job, parse, verdict,
+  compile+provenance, letter+provenance, pack, three docx downloads) walked green
+  against https://careercompiler.aigniteconsulting.ai.
+  Transcript: scratchpad estate_post_041b.txt (run namespace smoke-20260803T073635Z).
+
+Resource watch after cutover: careercompiler-service 530.3MiB / 1.465GiB; Beacon GoM
+containers unchanged (83.5 / 231.5 / 4.9 / 5.1 MiB, 5–6 week uptimes); host 8085 MB
+available. No rollback condition.
+
+Production 20-compile DoD run and the production real-corpus record: appended by the
+session report when their runs complete (dispatched immediately after the gate).

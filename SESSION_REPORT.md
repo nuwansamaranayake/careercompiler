@@ -1,73 +1,69 @@
-# Overnight run report — 2026-08-02/03
+# Run report — 2026-08-03, repair loop + real-corpus proof
 
-Production ends the night at **v0.4.0 (SHA 51ca391)**, two releases ahead of v0.3.1.
-No rollback occurred. Beacon GoM untouched all night (5-week uptimes, memory flat,
-8.1 GB host headroom). Fresh Hostinger snapshot 107426401 taken 02:35:50Z before the
-first deploy. The full product vision works in the browser: upload a resume, paste any
-job, get the verdict, and on a match download the targeted resume, the gated cover
-letter, and the interview pack. No credentials, no ids shown, no API instructions.
+Production ends at **v0.4.1 (SHA 4720c19, tagged, CI run 30793954540 green on that
+exact SHA)**. No rollback occurred; the one mid-deploy failure was caught by the new
+release gate, forward-fixed under a bounded budget, and re-verified. Beacon GoM
+untouched all night (5–6 week uptimes, memory flat, 8 GB host headroom). Snapshot
+107469778 taken before the first cutover. Nothing private is committed — proven with
+`git check-ignore` and a clean `git status` at every commit.
 
-## What shipped, with production evidence
+## The definition of done, item by item
 
-1. **Custom job flow (Obj 1)** — upload → paste posting → parse → fit verdict →
-   compile, one continuous flow. Proven in a production browser session:
-   `evidence/2026-08-03-obj1-production-walkthrough.txt` (19 facts extracted from an
-   uploaded PDF, 4/4 must-haves matched on a pasted JD, 19 gated bullets compiled).
-2. **Legible rejections + the root cause fixed (Obj 2)** — rejections now ship with
-   the failed quote and render as the anchor check working. The 25.4% rejection rate
-   was root-caused to PDF layout artifacts in stored text (measured: "AI-native\n
-   systems" vs the model's spaced quote) and fixed at storage; the gate is byte-verbatim
-   unchanged. Measured in production: the same failing document went 35/138 (25.4%) →
-   0/154 (0.0%). Rates by format in EVAL.md.
-3. **Cover letters, gated (Obj 3)** — same pipeline and gates as the resume, letter
-   voice, deterministic job-referential frame. **Pass condition met in production**: a
-   planted overstatement in a letter sentence failed the compile with
-   `unsupported_number`, evidence beside it.
-   `evidence/2026-08-03-obj345-production-walkthrough.txt`.
-4. **Interview pack (Obj 4)** — gate-survivors only; deterministic story/metrics/gaps
-   with the case-against; model writes only the skeptical questions; docx download.
-   Live in production (15 questions, 5 metrics lines in the walkthrough).
-5. **Tailoring position stated (Obj 5)** — beside every compiled page in production;
-   DECISION 004 carries the live failure and now the letter exception.
-6. **Deferred items (Obj 6)** — threshold calibration DONE (graded suite, curve
-   published, choice: keep 0.7 — a raise would false-reject honest letters measured at
-   0.79–0.83). C4 paraphrase stability MEASURED and published as a FAIL (below).
+- **Twenty consecutive seeded compiles without a visible gate failure:** 20/20 in
+  production (0% fail), `scratchpad/prod_20.jsonl`; before/after for the fix that got
+  us here: 1/20 → 0/20 locally (EVAL.md). The demo "Compile again" dead-end is gone —
+  the flow repairs itself and a post-repair refusal names the sentence, the facts it
+  reached for, and why.
+- **Real resume against every posting:** 6/6 pairings compile end to end (resume,
+  cover letter, interview pack) with the repair loop engaging one audited round per
+  pairing; verdicts 6/6 correct after the matcher calibration (two hard-mismatch
+  postings correctly refuse; production corpus record in fixtures/private/, aggregates
+  in EVAL.md).
+- **The gate no more permissive, proven:** planted inflated sentence and planted
+  invented number both REJECTED in production during the release gate (estate G2);
+  the adversarial review's gate-integrity lens returned zero findings; the planted-
+  negative test suites run unmodified.
+- **Nothing private committed:** fixtures/private/ gitignored before anything was
+  copied; the corpus runner prints aggregates only.
 
-## Blocked / deferred (one line each — full detail in BLOCKED.md)
+## What was diagnosed and fixed (each with its FAILURES.md entry)
 
-- C4 paraphrase stability: measured 0.600 (hashing) / 0.833 (openrouter) vs ≥0.85 —
-  unblocked by verdict-stability measurement + must/nice stratification, then an
-  acceptance-metric decision. Deliberately not tuned to pass.
-- F1 ATS parse-back gate: untouched, still deferred.
-- Letter-voice graded suite: needed before any per-kind entailment threshold.
+- **FAIL-0010** — the reported `40` failure: `40%` licenses only `40%`, the renderer
+  re-drafted blind at temperature 0, and the UI handed the retry to the user. Fixed by
+  the repair loop (rejection reasons fed back, cap 3, fully audited, gates issue every
+  verdict) + a deterministic numeral pre-check reusing the linker's own arithmetic.
+- **FAIL-0011** — name-subject facts made honest first-person letters unentailable
+  (0.018): extraction now writes bare predicates. Caught by the new gate, pre-deploy.
+- **FAIL-0012** — the keyless embedder default over-matched must-haves (WCAG "matched"
+  a C# fact at 0.49): embedder `auto` (resolved name never silent) + category-noun
+  guard + per-embedder floors calibrated from a 35-row labeled curve and verified by
+  re-fit (nurse and design-systems postings flip to do-not-apply; all true applies
+  hold). Two published misses remain inside the TP band (EVAL.md); requirement-type-
+  aware matching is the named follow-up.
+- **FAIL-0013** — verbless fact statements ("Kubernetes in production") support no
+  sentence: caught by the release gate ON the first v0.4.1 cutover, blocked the
+  release, forward-fixed (verb-initial statements), re-verified twice locally and by
+  the estate gate in production.
+- Plus nine confirmed findings from a 26-agent adversarial review (index-keyed
+  revisions, honest attempt counts, typed 503s, provenance steps in the gate, estate
+  subprocess hardening, corpus checkpointing) — all fixed same night.
 
-## Defects found tonight, and their state
+## The demo-path release gate (Part 6)
 
-- CI DuplicateColumn on fresh DBs (migration 0004 vs 0003's live-metadata create_all):
-  FIXED with an existence guard; both paths proven on a throwaway postgres.
-- Tenant scope prefix leaked into letter openings: FIXED (`_display`), regression test.
-- Interview-pack docx returned 200 instead of 201: FIXED at the Response.
-- cc-test image was stale (groundwork v0.1.0): environment fixed, invocation recorded.
-- Test suite requires `WEB_DIR=/nonexistent` now that images bake /srv/web: recorded in
-  LOOP_STATE (environment fact, not a code defect).
-- NLI blind spots published in EVAL.md: requirement-flavored gloss at 0.9785 and a
-  quantifier inversion at 0.9463 both survive 0.7 — known, published, unfixed.
+`scripts/demo_path_smoke.py` walks the exact visitor sequence with synthetic fixtures
+against production and is wired into the portfolio-ops estate smoke: it BLOCKED one
+release tonight (FAIL-0013) and then passed exit-0 as the last thing run after the
+final deploy. It consumes a demo session per run — more than 5 estate runs/hour from
+one IP will 429 (operator decision logged in BLOCKED.md).
 
-## Version anomaly (cosmetic, recorded)
+## Blocked / operator decisions (BLOCKED.md has full detail)
 
-A concurrently-running earlier session pushed 00579ef and tagged v0.3.2 at it (21:32
-CDT) while this run's Deploy 1 shipped a build self-reporting 0.3.2 at 82ae595. That
-session went idle 21:46 CDT. Resolution: tag left untouched, Deploy 2 shipped as
-v0.4.0 on 51ca391 (CI-green, watched to success), which is what production now runs
-and reports. Detail in BLOCKED.md.
+- Requirement-type-aware matching for the two published matcher misses.
+- Estate runs vs the 10/hour demo-session limit.
+- beacon-gom's portfolio-ops checkout diverges locally (+191/−53) — pull aborts;
+  discarding host edits is forbidden; estate runs from the workstation meanwhile.
 
-## Measured rejection rates by input format
+## Version anomaly follow-through (Part 8)
 
-See the EVAL.md table: real-world PDF pre-fix 25.4%; same content through normalized
-storage 0.0%; clean single-column PDF 0.0%; identical-content docx 0.0% (all post-fix
-rows measured against production v0.4.0 with real models).
-
-## Next objective
-
-Already in NEXT.md: C4 follow-up — measure verdict stability under paraphrase,
-stratify Jaccard by must-have vs nice-to-have, then decide the acceptance metric.
+`00579ef` (tagged v0.3.2) IS an ancestor of production — verified with
+`git merge-base --is-ancestor`; the tag stays. README status block now names v0.4.x.
