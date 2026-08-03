@@ -253,3 +253,25 @@ sensor was feeding it un-restatable atoms.
 statements (start with the verb or noun phrase; never the candidate's name or a pronoun
 as subject). Span anchoring is unchanged — quotes still must appear verbatim in the
 source. Verified by re-running the demo-path gate end to end after the change.
+
+## FAIL-0012 — The keyless embedder default over-matched must-haves on real pastes
+
+**Caught by the real-corpus run (2026-08-03), not by a user.** A design-systems posting
+whose must-haves (React Native years, Figma-to-code, CSS-in-JS, Storybook, a WCAG
+certification) are nowhere in the test resume came back `apply` with 6/6 must-haves
+matched.
+
+**Mechanism, from the stored match rows:** `/fit` defaulted to the hashing embedder
+(the browser flow never passes `embedder`), whose cosine noise floor sits at the match
+threshold — a CSS-in-JS requirement "matched" a retrieval-architecture skill fact at
+0.503 and a WCAG certification requirement "matched" a C# platform fact at 0.490.
+Genuine matches score 0.9+; the garbage sat at 0.49–0.68 and still cleared. The same
+default fed the compile selector's targeting.
+
+**Fix:** embedder `auto` (now the default for /fit, /compile, /cover-letter): real
+embeddings whenever OPENROUTER_API_KEY + EMBEDDING_MODEL are configured — which
+production sets — hashing only on the keyless path, and the resolved name is carried
+in the response and the stored fit report, so no request is silently downgraded.
+Re-measured on the same pairing after the fix: the false must-haves gap out and the
+verdict flips to do-not-apply (recorded in EVAL.md aggregates). The matcher's
+threshold and the compile gates are untouched.

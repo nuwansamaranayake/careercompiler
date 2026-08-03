@@ -14,3 +14,6 @@ from app.config import settings
 def _isolate_settings(monkeypatch):
     monkeypatch.setattr(settings, "smoke_test_token", "")
     monkeypatch.setattr(settings, "openrouter_api_key", "")
+    # With a developer .env present, embedder 'auto' would otherwise resolve to the
+    # network embedder inside tests (FAIL-0012 follow-on). Pinned empty: auto -> hashing.
+    monkeypatch.setattr(settings, "embedding_model", "")

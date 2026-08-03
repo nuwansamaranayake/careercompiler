@@ -110,6 +110,16 @@ def _gateway() -> LLMGateway:
 
 
 def _embedder(name: str):
+    """'auto' resolves to the best embedder this deployment can honestly run: real
+    embeddings when a key and model are configured, the keyless hashing embedder
+    otherwise. Never silent: the resolved name rides the response and the stored fit
+    report. Measured reason (FAIL-0012): the hashing embedder's noise floor sits at the
+    match threshold, so a pasted posting from an unrelated field can 'match' every
+    must-have — real embeddings gap what is not there."""
+    if name == "auto":
+        name = ("openrouter"
+                if settings.openrouter_api_key and settings.embedding_model
+                else "hashing")
     if name == "openrouter":
         if not settings.openrouter_api_key or not settings.embedding_model:
             raise HTTPException(
@@ -169,7 +179,7 @@ class JobIn(BaseModel):
 class FitIn(BaseModel):
     candidate_id: int
     job_id: int
-    embedder: str = Field(default="hashing", pattern="^(hashing|openrouter)$")
+    embedder: str = Field(default="auto", pattern="^(auto|hashing|openrouter)$")
 
 
 @router.post("/candidates", status_code=201)
@@ -296,7 +306,8 @@ def run_fit(body: FitIn, authorization: str | None = Header(default=None)):
                 score=r.score, explanation=r.explanation))
     return {"fit_report_id": rid, "verdict": report.verdict, "matched": report.matched,
             "partial": report.partial, "gaps": report.gaps,
-            "disqualifying_gaps": report.disqualifying_gaps}
+            "disqualifying_gaps": report.disqualifying_gaps,
+            "embedder": embedder.name}
 
 
 @router.get("/fit/{rid}")
@@ -322,7 +333,7 @@ class CompileIn(BaseModel):
     candidate_id: int
     job_id: int
     budget_lines: int = Field(default=0, ge=0)   # 0 -> settings.compile_budget_lines
-    embedder: str = Field(default="hashing", pattern="^(hashing|openrouter)$")
+    embedder: str = Field(default="auto", pattern="^(auto|hashing|openrouter)$")
 
 
 class CheckIn(BaseModel):
@@ -586,7 +597,7 @@ class CoverLetterIn(BaseModel):
     candidate_id: int
     job_id: int
     budget_lines: int = Field(default=6, ge=1, le=12)
-    embedder: str = Field(default="hashing", pattern="^(hashing|openrouter)$")
+    embedder: str = Field(default="auto", pattern="^(auto|hashing|openrouter)$")
 
 
 @router.post("/cover-letter", status_code=201)

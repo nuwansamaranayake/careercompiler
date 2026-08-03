@@ -88,6 +88,21 @@ def test_suffix_facts_license_their_digit_prefix_exactly_as_the_linker_does():
     assert v and v[0]["bad_tokens"] == ["15"]
 
 
+# ---------------------------------------------------------------- embedder resolution
+def test_auto_embedder_resolves_by_configuration(monkeypatch):
+    """FAIL-0012: the hashing embedder's noise floor sits at the match threshold, so
+    'auto' must resolve to real embeddings whenever the deployment can run them, and
+    to hashing only on the keyless path — and never silently: the resolved name rides
+    the fit response and the stored report."""
+    from app.engine.embedding import HashingEmbedder, OpenRouterEmbedder
+    from app.routes import _embedder
+    monkeypatch.setattr(settings, "openrouter_api_key", "test-key")
+    monkeypatch.setattr(settings, "embedding_model", "stub/embed")
+    assert isinstance(_embedder("auto"), OpenRouterEmbedder)
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
+    assert isinstance(_embedder("auto"), HashingEmbedder)
+
+
 # ------------------------------------------------------------------ loop tests (API)
 @pytest.fixture()
 def client(monkeypatch):
