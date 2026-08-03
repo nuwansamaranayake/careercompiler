@@ -45,10 +45,16 @@ Resuming: read NEXT.md first, then this file. Prior phase history: git log of th
   untouched. Format-rate measurement runs post-Deploy-2 (candidate-31 replay + PDF/docx
   pair).
 
-## Next
+## Run complete — 2026-08-03 ~03:45 UTC
 
-1. CI green on a6acee4 → Deploy 2 (v0.4.0): host build w/ args, up, table count 11,
-   smoke, browser walkthrough of letter + pack, estate smoke, docker stats, tag v0.4.0.
-2. Obj 2 measurement: replay candidate 31 text via entry path (rates before/after), and
-   riley PDF vs docx pair. Record in EVAL.md.
-3. Obj 6 if green. 4. SESSION_REPORT.md + NEXT.md.
+- PASS 3 GOAL: Deploy 2 (v0.4.0) + production proofs + measurements.
+  OUTCOME: achieved. v0.4.0 (51ca391) live and tagged on the CI-green SHA. Letter
+  planted-overstatement rejected in production (unsupported_number). Pack live. Obj 2
+  rates measured in production: 25.4% → 0.0% on the failing document; PDF/docx pair
+  0%/0%. Estate smoke exit 0 pre and post. Beacon GoM untouched. Threshold calibration
+  resolved (keep 0.7, misses published). C4 measured and published as FAIL — see
+  BLOCKED.md, next objective in NEXT.md.
+- Full report: SESSION_REPORT.md. Resume from NEXT.md.
+- CI note: one failure mid-run (DuplicateColumn on fresh DBs, 0004 vs 0003 live-metadata
+  create_all) fixed with an existence guard, both migration paths proven on a throwaway
+  postgres before re-push.
