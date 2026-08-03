@@ -419,6 +419,7 @@ def _render_with_repair(gateway, claims, chosen, job_title, reqs, sel, *, letter
         pre = numeral_violations(bs, claims_by_id)
         if pre:
             offending = [{
+                "index": v["index"],
                 "cites": v["cites"], "text": v["text"], "statements": v["statements"],
                 "allowed_tokens": v["allowed_tokens"],
                 "reasons": [(f"numeral(s) {', '.join(repr(t) for t in v['bad_tokens'])} "
@@ -434,6 +435,7 @@ def _render_with_repair(gateway, claims, chosen, job_title, reqs, sel, *, letter
             by_index: dict[int, dict] = {}
             for v in link.violations:
                 e = by_index.setdefault(v.bullet_index, {
+                    "index": v.bullet_index,
                     "cites": list(bs[v.bullet_index].cites), "text": v.text,
                     "statements": _cited_statements(bs[v.bullet_index], claims_by_id),
                     "allowed_tokens": sorted(set().union(*(
@@ -449,6 +451,7 @@ def _render_with_repair(gateway, claims, chosen, job_title, reqs, sel, *, letter
         rep = _entail(bs)
         if not rep.ok:
             offending = [{
+                "index": v.bullet_index,
                 "cites": list(bs[v.bullet_index].cites), "text": v.text,
                 "statements": _cited_statements(bs[v.bullet_index], claims_by_id),
                 "allowed_tokens": None,
@@ -482,10 +485,9 @@ def _render_with_repair(gateway, claims, chosen, job_title, reqs, sel, *, letter
         revised = revise_renderings(gateway, settings.llm_model_reasoning, offending,
                                     letter=letter)
         merged, changed = [], False
-        for b in bullets:
-            cid = b.cites[0] if b.cites else None
-            if cid in revised and revised[cid] != b.text:
-                merged.append(Bullet(revised[cid], list(b.cites)))
+        for i, b in enumerate(bullets):
+            if i in revised and revised[i] != b.text:
+                merged.append(Bullet(revised[i], list(b.cites)))
                 changed = True
             else:
                 merged.append(b)

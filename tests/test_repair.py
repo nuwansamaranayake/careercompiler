@@ -134,6 +134,32 @@ def _seed(client):
     return cid, jid, ids
 
 
+def test_two_bullets_citing_the_same_fact_revise_independently(client, monkeypatch):
+    """Review finding 2026-08-03: keying revisions by fact id collided when two bullets
+    cited the same fact — one revision vanished and the merge clobbered both. Keyed by
+    bullet index, each offending bullet gets exactly its own revision."""
+    cid, jid, ids = _seed(client)
+    monkeypatch.setattr(routes, "draft_bullets",
+                        lambda *a, **k: [
+                            Bullet("Cut deploy time by 40 percent at Acme Corp.", [ids[0]]),
+                            Bullet("Also cut deploys 40 percent, roughly.", [ids[0]]),
+                            Bullet("Operated 40 services at Globex.", [ids[1]])])
+
+    def per_index(gateway, model, offending, letter=False):
+        fixes = {0: "Cut deploy time 40% at Acme Corp.",
+                 1: "Rebuilt the CI pipeline at Acme Corp, cutting deploy time 40%."}
+        return {o["index"]: fixes[o["index"]] for o in offending if o["index"] in fixes}
+
+    monkeypatch.setattr(routes, "revise_renderings", per_index)
+    r = client.post("/api/v1/compile", json={"candidate_id": cid, "job_id": jid},
+                    headers=H)
+    assert r.status_code == 201, r.text
+    texts = [b["text"] for b in r.json()["bullets"]]
+    assert texts[0].startswith("Cut deploy time 40%")
+    assert texts[1].startswith("Rebuilt the CI pipeline")
+    assert texts[0] != texts[1], "each bullet kept its own revision"
+
+
 def test_a_repairable_numeral_draft_ships_repaired(client, monkeypatch):
     cid, jid, ids = _seed(client)
     monkeypatch.setattr(routes, "draft_bullets",
@@ -144,7 +170,7 @@ def test_a_repairable_numeral_draft_ships_repaired(client, monkeypatch):
 
     def fake_revise(gateway, model, offending, letter=False):
         calls.append(offending[0])
-        return {ids[0]: "Cut deploy time 40% at Acme Corp by rebuilding the CI pipeline."}
+        return {0: "Cut deploy time 40% at Acme Corp by rebuilding the CI pipeline."}
 
     monkeypatch.setattr(routes, "revise_renderings", fake_revise)
     r = client.post("/api/v1/compile", json={"candidate_id": cid, "job_id": jid},
@@ -205,7 +231,8 @@ def test_an_entailment_rejection_feeds_back_and_repairs(client, monkeypatch):
 
     def fake_revise(gateway, model, offending, letter=False):
         seen["reasons"] = offending[0]["reasons"]
-        return {ids[1]: "Ran Kubernetes in production at Globex, operating 40 services."}
+        return {offending[0]["index"]:
+                "Ran Kubernetes in production at Globex, operating 40 services."}
 
     monkeypatch.setattr(routes, "revise_renderings", fake_revise)
     r = client.post("/api/v1/compile", json={"candidate_id": cid, "job_id": jid},
@@ -226,7 +253,7 @@ def test_the_loop_is_bounded_at_three_rounds(client, monkeypatch):
                      "Reduced deploys 40, give or take."])
 
     def always_bad(gateway, model, offending, letter=False):
-        return {ids[0]: next(variants)}
+        return {0: next(variants)}
 
     monkeypatch.setattr(routes, "revise_renderings", always_bad)
     r = client.post("/api/v1/compile", json={"candidate_id": cid, "job_id": jid},
@@ -245,7 +272,7 @@ def test_letter_path_runs_the_same_loop(client, monkeypatch):
                             Bullet("I cut deploy time by 40 percent at Acme Corp.", [ids[0]])])
     monkeypatch.setattr(routes, "revise_renderings",
                         lambda gateway, model, offending, letter=False:
-                        {ids[0]: "I cut deploy time 40% at Acme Corp."})
+                        {0: "I cut deploy time 40% at Acme Corp."})
     r = client.post("/api/v1/cover-letter", json={"candidate_id": cid, "job_id": jid},
                     headers=H)
     assert r.status_code == 201, r.text

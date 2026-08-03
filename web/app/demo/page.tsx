@@ -35,7 +35,7 @@ type CheckResult = {
 type Refusal = { sentence: string; cited: string[]; why: string; rounds: number } | null;
 
 function refusalFrom(detail: unknown): Refusal {
-  const d = detail as { error?: string; repair?: unknown[];
+  const d = detail as { error?: string; repair?: { stage?: string }[];
     violations?: { text?: string; cited?: string[]; detail?: string;
                    entailment?: number; threshold?: number }[] };
   if (!d?.error || !d.violations?.length) return null;
@@ -44,8 +44,20 @@ function refusalFrom(detail: unknown): Refusal {
     ?? (v.entailment != null
         ? `the evidence supports it at ${v.entailment.toFixed(2)}, below the ${v.threshold} the gate requires`
         : d.error);
+  // One attempt per FAILED evaluation round; the revision_unchanged marker is the loop
+  // stopping honestly, not an attempt. Never invent a count the log does not carry.
+  const rounds = (d.repair ?? []).filter((e) => e.stage !== "revision_unchanged").length;
   return { sentence: v.text ?? "(sentence unavailable)", cited: v.cited ?? [],
-           why: why ?? d.error ?? "refused", rounds: (d.repair?.length ?? 0) + 1 };
+           why: why ?? d.error ?? "refused", rounds: Math.max(rounds, 1) };
+}
+
+/* A non-refusal failure still deserves its typed detail: entailment_unavailable carries
+   {error, message}; key-gate 503s and renderer 502s carry a plain string. */
+function plainDetail(detail: unknown, fallback: string): string {
+  if (typeof detail === "string") return detail;
+  const d = detail as { message?: string; error?: string } | undefined;
+  if (d?.message) return `${d.error ?? "unavailable"}: ${d.message}`;
+  return fallback;
 }
 
 function RefusalPanel({ r, what }: { r: NonNullable<Refusal>; what: string }) {
@@ -395,7 +407,7 @@ function CompilePanel({ session, jobId, candidateId, guard }: {
       const err = e as Error & { detail?: unknown };
       const r = refusalFrom(err.detail);
       setRefusal(r);
-      if (!r) setFailDetail(guard(e));
+      if (!r) setFailDetail(plainDetail(err.detail, guard(e)));
       setState("fail");
     }
   };
@@ -562,7 +574,7 @@ function LetterPanel({ session, jobId, candidateId, guard }: {
       const err = e as Error & { detail?: unknown };
       const r = refusalFrom(err.detail);
       setRefusal(r);
-      if (!r) setFailDetail(guard(e));
+      if (!r) setFailDetail(plainDetail(err.detail, guard(e)));
       setState("fail");
     }
   };

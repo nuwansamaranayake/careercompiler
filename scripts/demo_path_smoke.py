@@ -140,6 +140,14 @@ def main() -> int:
         print(f"[{step}] ok bullets={len(doc['bullets'])} "
               f"repair_rounds={len(doc.get('repair', []))}")
 
+        step = "5a provenance"
+        # The demo page fetches the provenance map synchronously after every compile
+        # and only then shows success — a break here is a break a visitor sees.
+        r = c.get(f"/api/v1/compile/{did}", headers=tok)
+        if r.status_code != 200 or not r.json().get("bullets") \
+                or not r.json()["bullets"][0].get("facts"):
+            return fail(f"{r.status_code} {r.text[:200]}")
+
         step = "5b resume docx"
         r = c.get(f"/api/v1/compile/{did}/docx", headers=tok)
         if r.status_code != 200 or r.content[:2] != b"PK" or len(r.content) < 5000:
@@ -153,6 +161,11 @@ def main() -> int:
         letter = r.json()
         print(f"[{step}] ok sentences={len(letter['sentences'])} "
               f"repair_rounds={len(letter.get('repair', []))}")
+
+        step = "6a letter provenance"
+        r = c.get(f"/api/v1/compile/{letter['document_id']}", headers=tok)
+        if r.status_code != 200 or not r.json().get("bullets"):
+            return fail(f"{r.status_code} {r.text[:200]}")
 
         step = "6b letter docx"
         r = c.get(f"/api/v1/compile/{letter['document_id']}/docx", headers=tok)

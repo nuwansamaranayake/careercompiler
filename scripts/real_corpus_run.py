@@ -78,26 +78,45 @@ def main() -> int:
         return {"error": detail.get("error"), "violations": toks,
                 "repair_rounds": len(detail.get("repair", []))}
 
+    out = Path(args.out) / f"corpus_results_{stamp}.json"
+
+    def checkpoint():
+        """The record survives any single pairing's crash (review, 2026-08-03)."""
+        out.write_text(json.dumps(record, indent=1), encoding="utf-8")
+
     for jobfile in sorted(Path(args.jobs).glob("*.txt")):
         p: dict = {"job": jobfile.name}
         t0 = time.time()
         try:
-            jid = c.post("/api/v1/jobs", headers=H, json={
+            jr = c.post("/api/v1/jobs", headers=H, json={
                 "title": f"{ns}{jobfile.stem}",
-                "description": jobfile.read_text(encoding="utf-8")},
-            ).json()["job_id"]
+                "description": jobfile.read_text(encoding="utf-8")})
+            if jr.status_code != 201:
+                p["outcome"] = f"job_create_failed_{jr.status_code}"
+                record["pairings"].append(p)
+                checkpoint()
+                continue
+            jid = jr.json()["job_id"]
             pr = llm.post(f"/api/v1/jobs/{jid}/requirements/parse", headers=H)
             p["parsed"] = pr.json().get("parsed") if pr.status_code == 201 else 0
             p["parse_status"] = pr.status_code
             if not p["parsed"]:
                 p["outcome"] = "no_requirements_parsed"
                 record["pairings"].append(p)
+                checkpoint()
                 print(f"{jobfile.name}: parsed=0 -> honest stop (nothing to match)")
                 continue
 
-            fit = c.post("/api/v1/fit", headers=H,
-                         json={"candidate_id": cid, "job_id": jid}).json()
+            fr = c.post("/api/v1/fit", headers=H,
+                        json={"candidate_id": cid, "job_id": jid})
+            if fr.status_code != 201:
+                p["outcome"] = f"fit_failed_{fr.status_code}"
+                record["pairings"].append(p)
+                checkpoint()
+                continue
+            fit = fr.json()
             p["verdict"] = fit.get("verdict")
+            p["embedder"] = fit.get("embedder")
             rows = c.get(f"/api/v1/fit/{fit['fit_report_id']}", headers=H).json()["rows"]
             p["must_matched"] = [x["req_key"] for x in rows
                                  if x["must_have"] and x["status"] == "matched"]
@@ -132,10 +151,12 @@ def main() -> int:
                 p["compile"] = {"ok": False,
                                 **gate_summary(cm.json().get("detail", {}))}
                 p["outcome"] = "compile_refused"
-        except httpx.HTTPError as exc:
-            p["outcome"] = f"transport_error: {exc!r}"
+        except Exception as exc:  # noqa: BLE001 — a pairing's crash is a recorded
+            # finding, never the death of the whole record (review, 2026-08-03).
+            p["outcome"] = f"error: {exc!r}"
         p["secs"] = round(time.time() - t0, 1)
         record["pairings"].append(p)
+        checkpoint()
         print(f"{jobfile.name}: verdict={p.get('verdict')} "
               f"must={len(p.get('must_matched', []))}/"
               f"{len(p.get('must_matched', [])) + len(p.get('must_missed', []))} "
@@ -143,8 +164,7 @@ def main() -> int:
               f"repairs={p.get('compile', {}).get('repair_rounds', '-')} "
               f"({p['secs']}s)")
 
-    out = Path(args.out) / f"corpus_results_{stamp}.json"
-    out.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    checkpoint()
     compiled = [p for p in record["pairings"] if p.get("outcome") == "compiled"]
     refused = [p for p in record["pairings"] if p.get("outcome") == "compile_refused"]
     repairs = sum(p.get("compile", {}).get("repair_rounds", 0)

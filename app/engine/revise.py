@@ -84,23 +84,24 @@ def revise_renderings(
     offending: list[dict],
     *,
     letter: bool = False,
-) -> dict[str, str]:
+) -> dict[int, str]:
     """Re-render only the rejected sentences, constrained by their rejection reasons.
 
-    `offending`: [{cites, text, reasons, statements, allowed_tokens?}] — one entry per
-    rejected bullet, single-cite by construction of the render form. Returns
-    {claim_id: revised_text}; an id the model skipped is simply absent, and the caller
-    treats an unchanged draft as exhaustion rather than looping blind."""
+    `offending`: [{index, cites, text, reasons, statements, allowed_tokens?}] — one
+    entry per rejected bullet. Keyed BY BULLET INDEX end to end: two bullets citing the
+    same fact must revise independently, so the fact id can never be the key (review
+    finding, 2026-08-03). Returns {bullet_index: revised_text}; an index the model
+    skipped is simply absent, and the caller treats an unchanged draft as exhaustion
+    rather than looping blind."""
     if not model:
         raise RuntimeError("LLM_MODEL_REASONING is not set. Refusing to guess a model.")
     if not offending:
         return {}
-    alias_of: dict[str, str] = {}
+    alias_of: dict[str, int] = {}
     payload_items = []
     for n, o in enumerate(offending):
-        cid = o["cites"][0] if o["cites"] else f"unknown-{n}"
         alias = f"F{n + 1}"
-        alias_of[alias] = cid
+        alias_of[alias] = int(o["index"])
         payload_items.append({
             "id": alias,
             "fact": o["statements"][0] if o.get("statements") else "(fact unavailable)",
@@ -122,9 +123,9 @@ def revise_renderings(
     )
     if isinstance(result, list):
         result = {"renderings": result}
-    out: dict[str, str] = {}
+    out: dict[int, str] = {}
     for r in result.get("renderings", []):
-        cid = alias_of.get(r.get("id", ""))
-        if cid and r.get("text"):
-            out[cid] = r["text"]
+        idx = alias_of.get(r.get("id", ""))
+        if idx is not None and r.get("text"):
+            out[idx] = r["text"]
     return out

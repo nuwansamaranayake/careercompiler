@@ -1,5 +1,19 @@
 # BLOCKED / deferred — needs a decision or scheduled work, with what unblocks it
 
+- **Estate runs consume 2 of the 10/hour per-IP demo sessions (review finding,
+  2026-08-03):** loop_careercompiler's B5 check opens one demo session and the
+  demo-path gate opens another, so more than 5 estate runs from one IP in an hour
+  false-fails careercompiler with 429. Tonight's cadence never exceeds 3. Unblocked
+  by an operator decision: reuse one session across both checks, or let the estate
+  bearer mint sessions exempt from the per-IP limit. Not band-aided overnight.
+- **beacon-gom's portfolio-ops checkout has local modifications (2026-08-03):**
+  `scripts/estate_smoke.py` diverges from origin by +191/−53 (an old hot-patch), plus
+  untracked `scripts/retention.py` / `scripts/retention_drill.py` (content-identical to
+  what origin now tracks) and an `evidence/` directory. `git pull` on the host aborts.
+  Discarding host modifications is a forbidden operation, and nothing requires the
+  host copy: the estate gate runs from the workstation via --ssh. Unblocked by the
+  operator reviewing the host diff and choosing keep/stash/reset.
+
 - **C4 paraphrase stability — measured, acceptance NOT met (2026-08-03).** Jaccard of
   matched-fact sets under JD paraphrase: 0.600 (hashing embedder), 0.833 (openrouter
   embedder) against the >= 0.85 acceptance. Failure mode identified and published in
