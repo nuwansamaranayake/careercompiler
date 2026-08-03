@@ -357,6 +357,16 @@ def _gate_detail(kind: str, violations: list[dict]) -> dict:
     return {"error": kind, "violations": violations}
 
 
+_TENANT_PREFIX = re.compile(r"^(?:demo|smoke)-\d{8}T\d{6}Z-[0-9a-f]+-")
+
+
+def _display(name: str) -> str:
+    """Tenant prefixes are scoping machinery, not names. They never belong in a
+    document a user reads (observed live: a letter opening with
+    'the demo-20260803T031221Z-bcd0dc-Platform Engineer role')."""
+    return _TENANT_PREFIX.sub("", name)
+
+
 @router.post("/compile", status_code=201)
 def compile_resume(body: CompileIn, authorization: str | None = Header(default=None)):
     """select -> render -> link -> gate, failing on the first gate that objects.
@@ -534,7 +544,8 @@ def compile_cover_letter(body: CoverLetterIn,
                 document_id=did, claim_id=o.claim_id, claim_key=o.claim_key,
                 reason=o.reason.value, detail=o.detail))
 
-    frame = letter_scaffold(cand.name if cand else "unknown", job.title)
+    frame = letter_scaffold(_display(cand.name) if cand else "unknown",
+                            _display(job.title))
     return {"document_id": did, "kind": "cover_letter", **frame,
             "sentences": [{"position": i, "text": b.text, "cites": b.cites,
                            "entailment": scores.get(i)} for i, b in enumerate(sentences)],
@@ -592,16 +603,16 @@ def get_compiled_docx(did: int, authorization: str | None = Header(default=None)
             f"threshold {doc['nli_threshold']}")
     if doc.get("kind") == "cover_letter":
         payload = render_letter_docx(
-            candidate_name=cand.name if cand else "unknown",
-            job_title=job.title if job else "unknown",
+            candidate_name=_display(cand.name) if cand else "unknown",
+            job_title=_display(job.title) if job else "unknown",
             sentences=[dict(b) for b in bullets],
             claims_by_id=claims,
             entailment_note=note)
         stem = "careercompiler-letter"
     else:
         payload = render_docx(
-            candidate_name=cand.name if cand else "unknown",
-            job_title=job.title if job else "unknown",
+            candidate_name=_display(cand.name) if cand else "unknown",
+            job_title=_display(job.title) if job else "unknown",
             bullets=[dict(b) for b in bullets],
             claims_by_id=claims,
             omissions=[Omission(o["claim_id"], o["claim_key"],
@@ -689,7 +700,7 @@ def build_interview_pack(body: InterviewPackIn,
                 .where(db.match_scores.c.fit_report_id == rep["id"],
                        db.match_scores.c.status != "matched")).mappings().all()
 
-    job_title = job.title if job else "unknown"
+    job_title = _display(job.title) if job else "unknown"
     b_items, entries = [], []
     for b in bullets:
         facts = [claims[cid] for cid in b["cites"] if cid in claims]
@@ -725,7 +736,8 @@ def build_interview_pack(body: InterviewPackIn,
 
     if body.format == "docx":
         payload = render_pack_docx(
-            candidate_name=cand.name if cand else "unknown", job_title=job_title,
+            candidate_name=_display(cand.name) if cand else "unknown",
+            job_title=job_title,
             verdict=verdict, case_against=case_against, entries=entries,
             gap_entries=gap_entries, note=note)
         return Response(

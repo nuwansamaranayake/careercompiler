@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-03
+
+The original vision closes: upload a resume, paste any job, get the verdict, and on a
+match walk out with a targeted resume, a cover letter, and an interview pack.
+
+### Added
+- **Custom job flow in the browser.** Paste any posting: create → parse → fit runs
+  in-page, the verdict card renders with the requirement table, and every fit answers
+  for exactly one resume (an uploaded resume becomes the working resume; verdicts are
+  never reused across candidates). No internal id is ever shown.
+- **Cover letters, gated (`POST /api/v1/cover-letter`).** Same select → render → link →
+  entailment pipeline as the resume, letter voice, one gated sentence per fact. The
+  job-referential frame (greeting, role line, closing) is deterministic template text
+  that claims nothing about the candidate. Letter docx ships the provenance map.
+  Planted overstatement rejected at 0.0003 in the local E2E against the real gate.
+- **Interview preparation pack (`POST /api/v1/interview-pack`).** Built from
+  gate-survivors only: the story is the cited fact statements verbatim with provenance,
+  the metrics are the numbers those statements carry, the gaps and the case against come
+  from the stored fit report. The model's only authority is the skeptical questions.
+  Stateless; docx download.
+- **Legible rejections.** The extract response carries each rejected claim with the
+  quote the model offered and why it will never match; the demo renders them as the
+  anchor check working, not an error.
+- `kind` on `compiled_documents` (migration 0004, column add — table count stays 11).
+
+### Fixed
+- **The 35/138 span-anchor rejection rate, at its root.** Measured in production:
+  PDF extraction hard-wraps sentences at layout line breaks and doubles spaces, so the
+  model's faithfully-spaced quote fails the verbatim find. Uploaded text is now
+  normalized (spaces collapsed, layout wraps joined, paragraph boundaries kept) before
+  it becomes the anchoring source. The anchor check stays byte-verbatim: the gate is
+  untouched, the source stopped lying about the document.
+- Tenant scoping prefixes no longer leak into documents (observed live: a letter
+  opening with "the demo-…-Platform Engineer role").
+
+### Stated
+- The tailoring position, in the product: the job chooses which facts make the page and
+  never rewords them; the cover letter's fixed frame is the one place the role may be
+  named. DECISION 004 gains the letter exception.
+
 ## [0.3.0] - 2026-08-03
 
 Public surface: demo sessions and the frontend. Minor bump.

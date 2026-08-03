@@ -5,7 +5,15 @@ PDF extraction hard-wrapped a sentence mid-clause and doubled spaces at layout g
 the model's faithfully-spaced quote failed the verbatim find. Normalization makes the
 stored source carry the document's sentences; the anchor stays byte-verbatim.
 """
-from app.routes import _normalize_doc_text
+from app.routes import _display, _normalize_doc_text
+
+
+def test_tenant_prefixes_never_reach_a_document():
+    # Observed live: a letter opened with "the demo-20260803T031221Z-bcd0dc-Platform
+    # Engineer role". Scoping machinery is not a name.
+    assert _display("demo-20260803T031221Z-bcd0dc-Platform Engineer") == "Platform Engineer"
+    assert _display("smoke-20260803T023734Z-ab12cd-T. Reviewer") == "T. Reviewer"
+    assert _display("Platform Engineer") == "Platform Engineer"
 
 
 def test_layout_wraps_join_and_spaces_collapse():
