@@ -13,10 +13,28 @@ from .embedding import Embedder, cosine
 from .facts import AtomicClaim
 from .jd import Requirement
 
-# Tuned on the golden suite with the deterministic embedder; real embeddings score the same
-# or higher for genuinely related text, so the floors are conservative in production.
+# Floors are PER EMBEDDER, because the two instruments have different noise floors —
+# measured on the 2026-08-03 real-corpus calibration (35 labeled rows, EVAL.md):
+# - hashing: tuned on the golden suite; unrelated text sits near 0, 0.55/0.22 hold.
+# - openrouter: unrelated professional text scores 0.27–0.60 (an ICU ventilator
+#   requirement scored 0.29 against a software resume; a WCAG certification 0.596), so
+#   the hashing floors made a must-have GAP unreachable and every posting read "apply".
+#   0.75 direct sits below the measured true-positive floor (0.766) and above four of
+#   the six measured false directs; 0.55 transferable turns the measured false
+#   partials into the gaps they are. Published misses at these floors (EVAL.md):
+#   react_native↔react 0.859 (lexical containment), icu_experience 0.793 (semantic
+#   gravity) still read direct. An unknown embedder gets the strictest floors.
+_FLOORS = {
+    "hashing": (0.55, 0.22),
+    "openrouter": (0.75, 0.55),
+}
+# The golden suite and its eval import these names; they remain the hashing floors.
 DIRECT_SIM = 0.55
 TRANSFER_SIM = 0.22
+
+
+def _floors_for(embedder_name: str) -> tuple[float, float]:
+    return _FLOORS.get(embedder_name, _FLOORS["openrouter"])
 _STOP = {"and", "or", "of", "with", "in", "to", "the", "a", "for", "on", "at"}
 # Generic tokens may not, on their own, establish a direct key match: "development" in
 # people_development must not directly satisfy "golang development" (observed in the
@@ -57,6 +75,7 @@ def match(
     rows: list[MatchRow] = []
     if not requirements:
         return rows
+    direct_sim, transfer_sim = _floors_for(embedder.name)
 
     req_texts = [f"{r.req_key} {r.text}" for r in requirements]
     claim_texts = [f"{c.claim_key} {c.core.statement}" for c in usable]
@@ -71,7 +90,7 @@ def match(
             key_overlap = bool(
                 (_tokens(c.claim_key.replace("_", " ")) & r_toks) - _GENERIC
             )
-            direct = key_overlap or sim >= DIRECT_SIM
+            direct = key_overlap or sim >= direct_sim
             score = sim + (0.35 if key_overlap else 0.0)
             if score > best[0]:
                 best = (score, c, direct)
@@ -81,7 +100,7 @@ def match(
                 req_key=r.req_key, must_have=r.must_have, status="matched", direct=True,
                 evidence_claim_ids=[c.core.claim_id], score=round(score, 4),
                 explanation=f"direct evidence: {c.claim_key} — {c.core.statement}"))
-        elif c is not None and score >= TRANSFER_SIM:
+        elif c is not None and score >= transfer_sim:
             rows.append(MatchRow(
                 req_key=r.req_key, must_have=r.must_have, status="partial", direct=False,
                 evidence_claim_ids=[c.core.claim_id], score=round(score, 4),

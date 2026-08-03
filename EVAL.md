@@ -41,6 +41,40 @@ and never silently skipped: the report states loudly when the key-gated section 
 The gate-test, selection-stability, ATS, and human-preference bounds below join in Phase 2/3
 with the code they measure.
 
+## Real-corpus proof (2026-08-03, one real resume × six authored postings)
+
+Rates and mechanisms only; the documents live outside the repo (fixtures/private/,
+gitignored). Full pipeline per pairing on the local stack with production-identical
+models, embedder `auto` → openrouter.
+
+- **Extraction:** 152 facts, 0 rejected on span anchoring, across two independent runs
+  (the 2026-08-02 normalization fix holding on the document that once rejected 25.4%).
+- **Pipeline:** 6/6 pairings compiled end to end (resume, cover letter, interview
+  pack); the repair loop engaged exactly one audited round in every pairing; zero
+  post-repair refusals; per-pairing wall time 76–232s.
+- **Verdicts, before and after the matcher calibration (same night):** pre-calibration
+  all six pairings read `apply`, including an ICU-nursing posting and a
+  design-systems posting whose must-haves are nowhere in the resume (FAIL-0012:
+  real-embedding noise floor sat above the hashing-tuned match floors, so a must-have
+  GAP was unreachable). Post-calibration: 4 apply / 2 do-not-apply — **6/6 correct**,
+  verified by re-fit on the same stored pairings.
+
+### Matcher floor calibration (35 labeled rows from the corpus run)
+
+| embedder | direct floor | transferable floor | chosen from |
+|---|---|---|---|
+| hashing | 0.55 | 0.22 | golden suite (unchanged) |
+| openrouter | 0.75 | 0.55 | measured TP floor 0.766 vs TN band 0.27–0.86 |
+
+**Published misses at these floors** (claims the matcher still gets wrong, kept
+deliberately rather than dial-twisted past the data): a React-Native requirement reads
+direct off a React fact at 0.859 (lexical containment), and an ICU-experience
+requirement reads direct off software incident-response experience at 0.793 (semantic
+gravity). Both sat inside the true-positive band; separating them needs requirement-
+type-aware matching (certifications, licenses, years-of), which is the named follow-up.
+The category-noun token guard (FAIL-0012) is separately regression-gated by the golden
+suite: transferable_violations 0, paraphrase invariance 1.0, stability 1.0.
+
 ## The render repair loop, before and after (measured 2026-08-03, FAIL-0010)
 
 20 compiles of the seeded candidate (10 per seeded job), local stack,

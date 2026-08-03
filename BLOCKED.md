@@ -1,14 +1,14 @@
 # BLOCKED / deferred — needs a decision or scheduled work, with what unblocks it
 
-- **DIRECT_SIM calibration for real embeddings (FAIL-0012 follow-up, 2026-08-03):**
-  the 0.55 direct-match floor was tuned on the hashing embedder; measured tonight,
-  real embeddings score six UNRELATED requirement/fact pairs at 0.62–0.86 (WCAG cert ↔
-  AI certification 0.769, CSS-in-JS ↔ RAG architecture 0.621, React Native ↔ React
-  0.859), so a hard-mismatch posting can read apply. A pure threshold cannot separate
-  React-Native↔React (0.859) from true positives (0.85–0.95): the calibration needs a
-  labeled near-neighbor suite (same discipline as the entailment threshold), likely
-  per-embedder floors plus a specific-token requirement for certification/years-type
-  must-haves. The six measured pairs are the seed set. Not dial-twisted overnight.
+- **Matcher floors — RESOLVED same night for the measured classes (FAIL-0012,
+  2026-08-03):** per-embedder floors landed (openrouter 0.75 direct / 0.55
+  transferable), chosen from the 35-row labeled corpus curve and verified by re-fit:
+  both hard-mismatch postings flipped to do-not-apply, all four true applies held
+  (EVAL.md). REMAINS OPEN: the two published misses inside the true-positive band —
+  React-Native↔React 0.859 (lexical containment) and ICU-experience↔incident-response
+  0.793 (semantic gravity). Unblocked by requirement-type-aware matching
+  (certification/license/years-of must-haves demand a specific token, not similarity),
+  with a labeled near-neighbor suite as its gate.
 
 - **Estate runs consume 2 of the 10/hour per-IP demo sessions (review finding,
   2026-08-03):** loop_careercompiler's B5 check opens one demo session and the

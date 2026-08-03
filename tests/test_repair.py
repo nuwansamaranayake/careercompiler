@@ -103,6 +103,48 @@ def test_auto_embedder_resolves_by_configuration(monkeypatch):
     assert isinstance(_embedder("auto"), HashingEmbedder)
 
 
+def test_matcher_floors_are_per_embedder():
+    """FAIL-0012 calibration: with real embeddings, unrelated professional text scores
+    0.27–0.60, so the hashing floors (0.55/0.22) made a must-have GAP unreachable and
+    every posting read apply. The openrouter floors (0.75/0.55) are chosen from the
+    measured 35-row corpus curve: below the true-positive floor (0.766), above four of
+    six measured false directs. Hashing behavior is byte-identical."""
+    from app.engine.matcher import match
+
+    class FakeEmb:
+        def __init__(self, name, sim):
+            self.name, self._sim = name, sim
+
+        def embed(self, texts):
+            # First vector [1,0]; the rest angled to cosine self._sim against it.
+            import math
+            out = [[1.0, 0.0]]
+            for _ in texts[1:]:
+                out.append([self._sim, math.sqrt(max(0.0, 1 - self._sim ** 2))])
+            return out
+
+    claims = claims_from_entries([
+        {"claim_key": "unrelated_fact", "kind": "skill",
+         "statement": "Completely different professional field."}])
+    req = [{"req_key": "target_requirement", "text": "Something else entirely",
+            "kind": "skill", "must_have": True}]
+    from app.engine.jd import requirements_from_entries
+    reqs = requirements_from_entries(req)
+
+    # 0.72 cosine: DIRECT under the old single floor, only PARTIAL under openrouter's.
+    row = match(reqs, claims, FakeEmb("openrouter", 0.72))[0]
+    assert row.status == "partial" and row.direct is False
+    # 0.50: a GAP under openrouter's transfer floor — do-not-apply becomes reachable.
+    row = match(reqs, claims, FakeEmb("openrouter", 0.50))[0]
+    assert row.status == "gap"
+    # Hashing floors unchanged: 0.72 is still a direct match there.
+    row = match(reqs, claims, FakeEmb("hashing", 0.72))[0]
+    assert row.status == "matched" and row.direct is True
+    # An embedder the table has never heard of gets the strictest floors.
+    row = match(reqs, claims, FakeEmb("mystery", 0.72))[0]
+    assert row.status == "partial"
+
+
 def test_an_embedder_outage_is_a_typed_503_not_a_500(client, monkeypatch):
     """CI caught the raw version of this: a placeholder key resolved 'auto' to the
     network embedder and /fit answered 500. An embedder outage is a typed refusal."""
