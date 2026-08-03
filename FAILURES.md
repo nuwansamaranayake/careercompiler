@@ -178,3 +178,21 @@ the *diagnosed* root cause separately (Standard 5).
   `DECISIONS.md` 003 records the stale-image warning.
 - **Rule this reinforces**: a local image is not evidence about production. Evidence comes
   from the artifact the Dockerfile builds today, or from production itself.
+
+## FAIL-0009 — Three minutes of production 502 from a stale env knob the deploy checklist missed
+
+- **Date**: 2026-08-03, first v0.3.0 deploy.
+- **Observed**: the container migrated to 11 tables, then its own start-up guard printed
+  `MIGRATION CHECK FAILED: expected 8 tables, found 11` and refused to serve — health 502
+  until `EXPECTED_TABLE_COUNT=11` was set in the host env and the service recreated
+  (~3 minutes). Beacon GoM was unaffected.
+- **Cause**: the deploy checklist in `LOOP_STATE.md` carried the NLI env fix but not the
+  table-count bump. `.env.example` was updated in the repo; the host's live `.env` was not.
+  The estate gate then failed for the same reason from the other side: `estate_smoke.py`
+  hardcoded 8 for this app.
+- **What worked**: the guard itself. Standard 4 exists so a partial or mismatched migration
+  never serves; it refused correctly and loudly, and the estate gate refused independently.
+- **Remediation**: env fixed, estate gate expects 11 and asserts the new compile tables
+  fill. The durable fix is that any migration PR must touch three places in one commit:
+  the alembic revision, `.env.example`, and the estate gate's App entry — recorded here
+  because the next migration author will not remember this.

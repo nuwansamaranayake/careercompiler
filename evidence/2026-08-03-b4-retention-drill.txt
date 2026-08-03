@@ -1,0 +1,2 @@
+B4: aged_before=1 sweep={'aged_namespaces': 1, 'deleted': 1, 'remaining': 26} aged_after=0
+B4 PROVEN: aged demo-tenant rows deleted by prefix-match retention, by row count

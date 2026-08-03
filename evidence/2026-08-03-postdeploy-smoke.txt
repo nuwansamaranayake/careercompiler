@@ -1,0 +1,48 @@
+run namespace: smoke-20260802T235106Z-   retention window: 7 days
+
+APP             TLS    HLTH  GUARD  TABLES   VERDICT
+seismograph     valid  200   503    9/9      GET / -> 200 text/html 5257B PASS
+careercompiler  valid  200   503    11/11    GET / -> 200 text/html 11885B PASS
+mycelium        valid  200   503    9/9      GET / -> 200 text/html 5886B PASS
+triage          valid  200   503    9/9      GET / -> 200 text/html 5736B PASS
+almanac         valid  200   503    9/9      GET / -> 200 text/html 6053B PASS
+parallax        valid  200   503    9/9      GET / -> 200 text/html 6082B PASS
+
+--- seismograph ---
+  write : POST /runs -> gate=pass cells=1
+  read  : GET /reports -> runs=1 metrics=1
+  rows  : contracts=21, runs=21, consistency_metrics=22, gate_decisions=21
+  retain: {'aged_namespaces': 0, 'deleted': 0, 'remaining': 10}
+  logs  : silent (no errors)
+--- careercompiler ---
+  write : POST /fit -> verdict=do_not_apply gaps=1; compile -> doc=2 bullets=2 min_entail=0.997
+  read  : GET /fit/23 -> rows=2; planted inflation+number rejected; no-token 401x3; demo cross-tenant 403
+  rows  : candidates=23, atomic_claims=68, job_postings=27, requirements=58, fit_reports=23, match_scores=54, compiled_documents=2, rendered_bullets=4
+  retain: {'aged_namespaces': 0, 'deleted': 0, 'remaining': 26}
+  logs  : silent (no errors)
+--- mycelium ---
+  write : POST /documents -> passages=2
+  read  : POST /query -> hits=2 top='smoke-20260802T235106Z-trave' freshness=aging acl_leak=0
+  rows  : documents=19, passages=38, principals=38, acl_entries=19, queries=38, retrievals=38
+  retain: {'aged_namespaces': 0, 'deleted': 0, 'remaining': 48}
+  logs  : silent (no errors)
+--- triage ---
+  write : POST /feedback/import + /triage/run -> clusters=19
+  read  : GET /issues/23 -> state=triaged freq=3 severity=1.795
+  rows  : feedback_items=57, aspects=38, clusters=19, issues=19, issue_transitions=18, severity_scores=234
+  retain: {'aged_namespaces': 0, 'deleted': 0, 'remaining': 10}
+  logs  : silent (no errors)
+--- almanac ---
+  write : POST /ingest+/forecasts+/envelopes -> qty 136.906/142.55/142.55
+  read  : GET /envelopes/22 -> point_qty=142.55
+  rows  : skus=20, sales_records=560, repaired_demand=560, forecasts=20, forecast_points=140, action_envelopes=20
+  retain: {'aged_namespaces': 0, 'deleted': 0, 'remaining': 10}
+  logs  : silent (no errors)
+--- parallax ---
+  write : POST /drift/compute -> top=checkout drift_index=0.8333
+  read  : GET /drift -> rows=2 brief_stats=16
+  rows  : projects=20, workstreams=40, claimed_items=76, observed_commits=40, drift_indices=40, briefs=19, brief_stats=304
+  retain: {'aged_namespaces': 0, 'deleted': 0, 'remaining': 10}
+  logs  : silent (no errors)
+
+ESTATE SMOKE OK: 6 apps, business loops and database truth verified
