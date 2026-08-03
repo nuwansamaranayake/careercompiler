@@ -1,15 +1,17 @@
 "use client";
-/* The demo: fit verdicts -> compile -> THE REJECTION MOMENT -> provenance -> docx.
+/* The demo: resume -> job -> fit verdict -> compile -> THE REJECTION MOMENT -> docx.
 
+   One continuous flow: bring a resume (seeded or your own upload), bring a job (seeded
+   or paste your own posting), get the honest verdict, compile the evidence-backed page.
    E2 is the product: edit a bullet to overstate the evidence, submit, watch the gate
    reject it with the cited facts beside it and the score visible. Honest states
    everywhere: no fabricated numbers, unknown says unknown, errors show as errors. */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Job = { job_id: number; fit_report_id: number; title: string; verdict: string };
+type SeededJob = { job_id: number; fit_report_id: number; title: string; verdict: string };
 type Session = {
   token: string; expires_in: number; request_budget: number; synthetic: boolean;
-  candidate_id: number; candidate_name: string; jobs: Job[];
+  candidate_id: number; candidate_name: string; jobs: SeededJob[];
 };
 type Bullet = { position: number; text: string; cites: string[]; entailment: number | null };
 type Fact = { claim_id: string; claim_key: string | null; statement: string | null; provenance: string | null };
@@ -27,6 +29,10 @@ type CheckResult = {
   entailment: { checked: boolean; ok?: boolean; score?: number | null; threshold?: number;
                 violations?: { detail: string; premise: string }[] };
 };
+/* Which resume is driving the flow right now. The seeded synthetic candidate by default;
+   an upload replaces it for every fit and compile that follows. Ids stay internal. */
+type ActiveResume = { cid: number; label: string; synthetic: boolean };
+type FitState = { rid: number; verdict: string; forCid: number };
 
 const S_KEY = "cc-demo-session";
 
@@ -119,6 +125,10 @@ export default function Demo() {
 
 function SessionView({ session, restart }: { session: Session; restart: () => void }) {
   const [fatal, setFatal] = useState("");
+  const [active, setActive] = useState<ActiveResume>({
+    cid: session.candidate_id, label: session.candidate_name, synthetic: true });
+  const [customJobs, setCustomJobs] = useState<
+    { job_id: number; title: string; initialFit: FitState }[]>([]);
   const guard = useCallback((e: unknown) => {
     const msg = friendly(e);
     if (msg.startsWith("This ")) setFatal(msg); // expiry/budget end the session honestly
@@ -134,40 +144,94 @@ function SessionView({ session, restart }: { session: Session; restart: () => vo
   }
   return (
     <>
-      <h2>1 · Honest fit verdicts <span className="chip syn">synthetic</span></h2>
+      <h2>1 · The resume</h2>
       <p className="dim">
-        Candidate: <strong>{session.candidate_name}</strong> — five seeded facts, each carrying provenance. Two job
-        postings, seeded so you can see both answers the product gives.
+        Working from: <strong>{active.label}</strong>
+        {active.synthetic
+          ? <span className="chip syn">synthetic</span>
+          : <span className="chip ok">your upload</span>}
+        {!active.synthetic && (
+          <button className="secondary" style={{ marginLeft: "0.6rem" }}
+            onClick={() => setActive({ cid: session.candidate_id, label: session.candidate_name, synthetic: true })}>
+            Switch back to the seeded resume
+          </button>
+        )}
+      </p>
+      <UploadPanel session={session} guard={guard}
+        onReady={(cid, stats) => setActive({
+          cid, synthetic: false,
+          label: `your resume (${stats.stored} extracted facts)` })} />
+      <h2>2 · The job, and the honest verdict</h2>
+      <p className="dim">
+        Two seeded postings, invented so both answers the product gives are one click away —
+        or paste a real posting below and get the verdict on <strong>{active.synthetic ? "the seeded resume" : "your own resume"}</strong>.
       </p>
       {session.jobs.map((j) => (
-        <FitCard key={j.job_id} session={session} job={j} guard={guard} />
+        <FitCard key={j.job_id} session={session} jobId={j.job_id} title={j.title}
+          candidateId={active.cid}
+          initialFit={{ rid: j.fit_report_id, verdict: j.verdict, forCid: session.candidate_id }}
+          guard={guard} />
       ))}
-      <UploadPanel session={session} guard={guard} />
+      {customJobs.map((j) => (
+        <FitCard key={j.job_id} session={session} jobId={j.job_id} title={j.title}
+          candidateId={active.cid} initialFit={j.initialFit} guard={guard} />
+      ))}
+      <CustomJobPanel session={session} candidateId={active.cid} guard={guard}
+        onCreated={(job) => setCustomJobs((xs) => [...xs, job])} />
     </>
   );
 }
 
-function FitCard({ session, job, guard }: { session: Session; job: Job; guard: (e: unknown) => string }) {
+function FitCard({ session, jobId, title, candidateId, initialFit, guard }: {
+  session: Session; jobId: number; title: string; candidateId: number;
+  initialFit?: FitState; guard: (e: unknown) => string;
+}) {
+  const [fit, setFit] = useState<FitState | null>(initialFit ?? null);
   const [report, setReport] = useState<Record<string, unknown> | null>(null);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [msg, setMsg] = useState("");
-  const ok = job.verdict === "apply";
+  const [busy, setBusy] = useState(false);
+  // A fit report answers for one resume. If the active resume changed, the old
+  // verdict is not this resume's verdict — require a fresh run, never reuse.
+  const current = fit && fit.forCid === candidateId ? fit : null;
+  const ok = current?.verdict === "apply";
+
+  const runFit = async () => {
+    setBusy(true); setMsg(""); setReport(null); setRows([]);
+    try {
+      const d = await api<{ fit_report_id: number; verdict: string }>(
+        session.token, "/api/v1/fit", {
+          method: "POST",
+          body: JSON.stringify({ candidate_id: candidateId, job_id: jobId }),
+        });
+      setFit({ rid: d.fit_report_id, verdict: d.verdict, forCid: candidateId });
+    } catch (e) { setMsg(guard(e)); }
+    finally { setBusy(false); }
+  };
+
   const load = async () => {
+    if (!current) return;
     try {
       const d = await api<{ report: Record<string, unknown>; rows: Record<string, unknown>[] }>(
-        session.token, `/api/v1/fit/${job.fit_report_id}`);
+        session.token, `/api/v1/fit/${current.rid}`);
       setReport(d.report); setRows(d.rows);
     } catch (e) { setMsg(guard(e)); }
   };
+
   return (
     <div className="panel">
       <p style={{ margin: 0 }}>
-        <strong>{job.title}</strong>
-        <span className={`chip ${ok ? "ok" : "bad"}`}>{job.verdict.replace(/_/g, " ")}</span>
-        {!report && <button className="secondary" style={{ float: "right" }} onClick={load}>Why?</button>}
+        <strong>{title}</strong>
+        {current
+          ? <span className={`chip ${ok ? "ok" : "bad"}`}>{current.verdict.replace(/_/g, " ")}</span>
+          : <button className="secondary" style={{ float: "right" }} onClick={runFit} disabled={busy}>
+              {busy ? "Matching…" : "Run the fit for this resume"}
+            </button>}
+        {current && !report &&
+          <button className="secondary" style={{ float: "right" }} onClick={load}>Why?</button>}
       </p>
       {msg && <p className="err small">{msg}</p>}
-      {report && (
+      {current && report && (
         <>
           {typeof report.case_against === "string" && report.case_against && (
             <p className={`small ${ok ? "dim" : "err"}`}>
@@ -186,14 +250,81 @@ function FitCard({ session, job, guard }: { session: Session; job: Job; guard: (
               ))}
             </tbody>
           </table>
-          <CompilePanel session={session} job={job} guard={guard} />
+          <CompilePanel session={session} jobId={jobId} candidateId={candidateId} guard={guard} />
         </>
       )}
     </div>
   );
 }
 
-function CompilePanel({ session, job, guard }: { session: Session; job: Job; guard: (e: unknown) => string }) {
+function CustomJobPanel({ session, candidateId, guard, onCreated }: {
+  session: Session; candidateId: number; guard: (e: unknown) => string;
+  onCreated: (job: { job_id: number; title: string; initialFit: FitState }) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [stage, setStage] = useState<"idle" | "job" | "parse" | "fit">("idle");
+  const [msg, setMsg] = useState("");
+
+  const stages: Record<string, string> = {
+    job: "Storing the posting…",
+    parse: "Reading the posting into requirements — the model senses, the matcher decides…",
+    fit: "Matching your evidence against the requirements…",
+  };
+
+  const submit = async () => {
+    if (!text.trim()) { setMsg("paste the job posting text first"); return; }
+    setMsg("");
+    try {
+      setStage("job");
+      const t = title.trim() || "The role you pasted";
+      const { job_id } = await api<{ job_id: number }>(session.token, "/api/v1/jobs", {
+        method: "POST", body: JSON.stringify({ title: t, description: text }) });
+      setStage("parse");
+      const p = await api<{ parsed: number }>(
+        session.token, `/api/v1/jobs/${job_id}/requirements/parse`, { method: "POST" });
+      if (p.parsed === 0) {
+        setMsg("No requirements could be read out of that text. The matcher has nothing to match against — try pasting the full posting, including the qualifications section.");
+        setStage("idle"); return;
+      }
+      setStage("fit");
+      const f = await api<{ fit_report_id: number; verdict: string }>(
+        session.token, "/api/v1/fit", {
+          method: "POST",
+          body: JSON.stringify({ candidate_id: candidateId, job_id }) });
+      onCreated({ job_id, title: t,
+        initialFit: { rid: f.fit_report_id, verdict: f.verdict, forCid: candidateId } });
+      setTitle(""); setText(""); setStage("idle");
+    } catch (e) { setMsg(guard(e)); setStage("idle"); }
+  };
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>Paste a job posting</h2>
+      <p className="dim small">
+        Any posting, pasted as text. The model reads it into typed requirements — you will
+        see every one it found, and the deterministic matcher scores your evidence against
+        them. The verdict can be <em>do not apply</em>: that is the product working.
+      </p>
+      <p>
+        <input type="text" placeholder="Job title (optional)" value={title}
+          onChange={(e) => setTitle(e.target.value)} style={{ width: "100%" }} />
+      </p>
+      <textarea rows={8} placeholder="Paste the job description here…" value={text}
+        onChange={(e) => setText(e.target.value)} style={{ width: "100%" }} />
+      <p>
+        <button onClick={submit} disabled={stage !== "idle"}>
+          {stage === "idle" ? "Get the verdict" : stages[stage]}
+        </button>
+      </p>
+      {msg && <p className="err small">{msg}</p>}
+    </div>
+  );
+}
+
+function CompilePanel({ session, jobId, candidateId, guard }: {
+  session: Session; jobId: number; candidateId: number; guard: (e: unknown) => string;
+}) {
   const [state, setState] = useState<"idle" | "run" | "done" | "fail">("idle");
   const [doc, setDoc] = useState<Compiled | null>(null);
   const [prov, setProv] = useState<ProvBullet[]>([]);
@@ -211,7 +342,7 @@ function CompilePanel({ session, job, guard }: { session: Session; job: Job; gua
     try {
       const d = await api<Compiled>(session.token, "/api/v1/compile", {
         method: "POST",
-        body: JSON.stringify({ candidate_id: session.candidate_id, job_id: job.job_id }),
+        body: JSON.stringify({ candidate_id: candidateId, job_id: jobId }),
       });
       setDoc(d);
       const p = await api<{ bullets: ProvBullet[] }>(session.token, `/api/v1/compile/${d.document_id}`);
@@ -264,7 +395,7 @@ function CompiledView({ doc, prov, session, guard }: {
   };
   return (
     <>
-      <h2 style={{ marginTop: "1.4rem" }}>2 · The compiled page</h2>
+      <h2 style={{ marginTop: "1.4rem" }}>The compiled page</h2>
       <p className="dim small">
         {doc.bullets.length} bullets, {doc.used_lines} of {doc.budget_lines} budget lines.
         Gate: <code>{doc.gate.model}</code> @ <code>{doc.gate.revision.slice(0, 12)}</code>,
@@ -396,11 +527,13 @@ function CheckVerdict({ r, threshold, facts }: { r: CheckResult; threshold: numb
   );
 }
 
-function UploadPanel({ session, guard }: { session: Session; guard: (e: unknown) => string }) {
+function UploadPanel({ session, guard, onReady }: {
+  session: Session; guard: (e: unknown) => string;
+  onReady: (cid: number, stats: { stored: number; rejected: number }) => void;
+}) {
   const [state, setState] = useState<"idle" | "up" | "extracting" | "done">("idle");
   const [msg, setMsg] = useState("");
   const [stats, setStats] = useState<{ stored: number; rejected: number } | null>(null);
-  const [cid, setCid] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const upload = async () => {
@@ -415,23 +548,23 @@ function UploadPanel({ session, guard }: { session: Session; guard: (e: unknown)
         method: "POST", headers: { Authorization: `Bearer ${session.token}` }, body: fd });
       if (!r.ok) { setMsg(`upload failed: HTTP ${r.status} — ${(await r.json()).detail ?? ""}`); setState("idle"); return; }
       const { candidate_id } = await r.json();
-      setCid(candidate_id);
       setState("extracting");
       const ex = await api<{ stored: number; rejected_span_anchor: number }>(
         session.token, `/api/v1/candidates/${candidate_id}/claims/extract`, { method: "POST" });
-      setStats({ stored: ex.stored, rejected: ex.rejected_span_anchor });
+      const st = { stored: ex.stored, rejected: ex.rejected_span_anchor };
+      setStats(st);
       setState("done");
+      onReady(candidate_id, st);
     } catch (e) { setMsg(guard(e)); setState("idle"); }
   };
 
   return (
     <div className="panel">
-      <h2 style={{ marginTop: 0 }}>3 · Or use your own resume</h2>
-      <p className="dim small">
-        PDF or docx. This is personal data: it lives only in your session&apos;s tenant and is
-        deleted by the retention sweep once it is older than 7 days. Extraction is
-        span-anchored — every extracted fact must quote
-        your document verbatim, and a quote that fails to anchor is stored rejected and never
+      <p className="dim small" style={{ marginTop: 0 }}>
+        <strong>Or bring your own.</strong> PDF or docx. This is personal data: it lives only
+        in your session&apos;s tenant and is deleted by the retention sweep once it is older
+        than 7 days. Extraction is span-anchored — every extracted fact must quote your
+        document verbatim, and a quote that fails to anchor is stored rejected and never
         used.
       </p>
       <p>
@@ -441,13 +574,12 @@ function UploadPanel({ session, guard }: { session: Session; guard: (e: unknown)
         </button>
       </p>
       {msg && <p className="err small">{msg}</p>}
-      {state === "done" && stats && cid != null && (
+      {state === "done" && stats && (
         <p className="small">
-          Extracted <strong>{stats.stored}</strong> facts
+          Extracted <strong>{stats.stored}</strong> facts from your resume
           {stats.rejected > 0 && <>; <strong>{stats.rejected}</strong> rejected on span anchoring
-          (they will never match)</>}. Your candidate id is <code>{cid}</code> — run a fit
-          against a seeded job above by compiling from the API, or open a fresh session to
-          start over. The full custom-job flow ships after this demo.
+          (they will never match)</>}. It is now the working resume — run a fit on a seeded
+          job, or paste a posting below.
         </p>
       )}
     </div>
