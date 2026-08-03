@@ -177,7 +177,8 @@ def create_candidate(body: CandidateIn, authorization: str | None = Header(defau
             name=f"{scope or ''}{body.name}")).inserted_primary_key[0]
         if body.resume_text:
             s.execute(db.source_documents.insert().values(
-                candidate_id=cid, name="resume.txt", text=body.resume_text))
+                candidate_id=cid, name="resume.txt",
+                text=_normalize_doc_text(body.resume_text)))
     return {"candidate_id": cid}
 
 
