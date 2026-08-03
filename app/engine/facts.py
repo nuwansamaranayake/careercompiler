@@ -107,13 +107,16 @@ def extract_facts(
                          "platform_kubernetes, scope_42_services). quote is a VERBATIM "
                          "substring of the resume that evidences the claim. Never infer "
                          "facts that are not in the text.\n"
-                         "statement is a BARE PREDICATE: start with the verb or noun "
-                         "phrase, never with the candidate's name or a pronoun "
-                         "('Ran Kubernetes in production', NOT 'Jane Doe ran Kubernetes' "
-                         "and NOT 'She ran Kubernetes'). A statement that names its "
-                         "subject cannot be restated in first person without changing "
-                         "its subject, and downstream verification scores that as a "
-                         "different person's claim. Return JSON.")},
+                         "statement is a BARE PREDICATE THAT STARTS WITH A VERB and "
+                         "asserts something: 'Ran Kubernetes in production', 'Held the "
+                         "on-call pager', 'Cut deploy time 40%'. NEVER the candidate's "
+                         "name or a pronoun as subject ('Jane Doe ran…', 'She ran…') — "
+                         "a named subject cannot be restated in first person. NEVER a "
+                         "bare noun phrase ('Kubernetes in production', 'Python, SQL') "
+                         "— a noun phrase asserts nothing, so downstream verification "
+                         "rejects every sentence built on it. If the resume lists a "
+                         "skill without a verb, write the weakest verb the text "
+                         "supports: 'Worked with X', never more. Return JSON.")},
             {"role": "user", "content": resume_text},
         ],
         json_schema=EXTRACTION_SCHEMA,

@@ -286,3 +286,22 @@ the false matches (both measured, recorded same date):
    named follow-up in BLOCKED.md; the floor was not dial-twisted overnight. Until it
    lands, a hard-mismatch posting from an adjacent tech vocabulary can still read
    apply — known, published, unfixed.
+
+## FAIL-0013 — A verbless fact can support no sentence at all
+
+**Caught by the post-deploy demo-path gate (2026-08-03), release blocked, not a user.**
+The v0.4.1 estate run failed the visitor path at the cover letter: "I have used
+Kubernetes in production." scored 0.439 against its cited fact.
+
+**Mechanism:** the FAIL-0011 fix told extraction to write statements as "the verb or
+noun phrase" — and the model sometimes chose the noun phrase ("Kubernetes in
+production"). A bare noun phrase asserts nothing, so the NLI correctly refuses every
+sentence that adds a verb to it; the resume voice happens to survive (a fragment
+restated as a fragment), the letter voice cannot. Extraction phrasing is model-
+nondeterministic, which is why the same fixture passed locally and failed in
+production: the gate flickers with the draw.
+
+**Fix at the sensor, gate untouched:** statements must start with a verb and assert
+something; a listed skill without a verb becomes the weakest verb the text supports
+("Worked with X"), never more. The demo-path gate runs on every estate invocation, so
+a recurrence blocks the release rather than reaching a visitor.
