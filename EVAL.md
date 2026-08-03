@@ -41,6 +41,25 @@ and never silently skipped: the report states loudly when the key-gated section 
 The gate-test, selection-stability, ATS, and human-preference bounds below join in Phase 2/3
 with the code they measure.
 
+## The render repair loop, before and after (measured 2026-08-03, FAIL-0010)
+
+20 compiles of the seeded candidate (10 per seeded job), local stack,
+production-identical models, same script both runs:
+
+| | failed | rate | failing check |
+|---|---|---|---|
+| before the repair loop | 1/20 | 5% | entailment — "over 6 years" vs "for 6 years", 0.52 |
+| after the repair loop | 0/20 | 0% | — |
+
+In the after-sample every draft was clean on round 1 (the loop never fired), so the
+0% alone does not prove the loop — the demo-path gate run does: its compile engaged
+one repair round and shipped, and its cover letter exhausted three audited rounds and
+was honestly refused, which exposed FAIL-0011 (name-subject facts) before any deploy.
+The loop's mechanics are pinned by seven tests (repairable drafts ship repaired;
+exhaustion returns the unchanged gates' verdict with the audit log; the round cap
+holds; the letter path runs the same loop). The gates are byte-identical: the
+planted-negative suites run unmodified and green, in CI and in production (estate G2).
+
 ## Span-anchor rejection rates by input format (measured in production, 2026-08-03)
 
 The 2026-08-02 live run rejected 35 of 138 extracted facts on span anchoring from one

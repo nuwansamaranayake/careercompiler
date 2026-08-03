@@ -4,12 +4,18 @@
 session (no sign-up), overstate a bullet, and watch the compile fail with the cited
 evidence beside it.
 
-> **Status: Phase 2 compiler deployed (v0.3.0).** The Phase 1 honest analyzer
-> (span-anchored extraction, deterministic matcher, do-not-apply verdicts) plus the
-> generation half: a knapsack content selector with typed omission reasons, an LLM renderer
-> that phrases but never chooses content or computes a number, a deterministic
-> reference-integrity linker, and an NLI entailment gate pinned by revision digest.
-> [ROADMAP.md](ROADMAP.md) shows what exists versus what is next.
+> **Status: full pipeline deployed (v0.4.x).** v0.3.0 shipped the compiler — the Phase 1
+> honest analyzer (span-anchored extraction, deterministic matcher, do-not-apply
+> verdicts) plus the generation half: a knapsack content selector with typed omission
+> reasons, an LLM renderer that phrases but never chooses content or computes a number,
+> a deterministic reference-integrity linker, and an NLI entailment gate pinned by
+> revision digest. v0.4.0 completed the vision in the browser: paste any job posting for
+> a fit verdict on your own uploaded resume, gated cover letters (same gates, letter
+> voice, deterministic job-referential frame), an interview pack built only from
+> gate-survivors, rejected extractions shown with the quote that failed to anchor, and
+> the tailoring position stated in the product. Since then: a capped, audited render
+> repair loop — rejections feed back to the renderer; the gates stay exactly as strict
+> and issue every verdict. [ROADMAP.md](ROADMAP.md) shows what exists versus what is next.
 
 **A compiler, not a ghostwriter.** Your span-anchored career facts are the source code, the job
 description is the target platform, and the resume is a compiled artifact in which every sentence

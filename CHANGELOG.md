@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-03
+
+The gate gets a feedback path; the gate itself does not move.
+
+### Added
+- **The render repair loop (FAIL-0010).** On a numeral pre-check, linker, or entailment
+  rejection, the renderer is re-prompted with the exact rejection reason — the offending
+  token, the fact, and the numeral spellings the evidence licenses — for at most three
+  audited rounds. The exhaustion verdict is issued by the unchanged linker and
+  entailment gates; a draft the pre-check dislikes but the gates accept ships. Measured:
+  1/20 seeded compiles failed before, 0/20 after; the loop's live engagement was proven
+  by the demo-path gate (one repaired compile, one honestly refused letter).
+- **Deterministic numeral pre-check** (`app/engine/revise.py`): the linker's own token
+  arithmetic, imported — one definition — run before any gate round trip to catch the
+  unsupported-number class cheaply. Honest cases (word numerals, formatted variants,
+  years present in the fact) never trigger it.
+- **The demo-path gate** (`scripts/demo_path_smoke.py`): walks the exact visitor
+  sequence — session, upload, paste job, verdict, compile, letter, pack, downloads —
+  against a live host with synthetic fixtures only; wired into the portfolio-ops estate
+  smoke, so a broken demo path blocks any release. It caught FAIL-0011 before deploy.
+- **Real-corpus runner** (`scripts/real_corpus_run.py`): one real resume against every
+  supplied posting under a retention-swept private tenant; aggregates to EVAL.md,
+  content never leaves `fixtures/private/` (gitignored).
+
+### Fixed
+- **Name-subject fact statements (FAIL-0011).** Extraction now writes bare-predicate
+  statements ("Ran Kubernetes…", never "Jane Doe ran Kubernetes"), because a
+  first-person letter sentence can never entail a premise about a named third party —
+  measured 0.018 by the demo-path gate. Sensor fixed; gate untouched.
+- **The failure UX.** "Compile again" is gone. A post-repair refusal names the sentence
+  that could not be grounded, the facts it reached for, and why — the product being
+  honest instead of looking broken.
+
 ## [0.4.0] - 2026-08-03
 
 The original vision closes: upload a resume, paste any job, get the verdict, and on a
