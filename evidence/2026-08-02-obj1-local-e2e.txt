@@ -1,0 +1,28 @@
+Objective 1 + 2 local verification — 2026-08-02 ~21:30 CDT
+Build: careercompiler-service:latest rebuilt from working tree (groundwork v0.2.0),
+cc-test rebuilt on top (pytest + ruff). Local stack recreated on the new image, port 8890.
+
+Gates, all exit 0:
+- ruff check .                                  -> All checks passed!
+- pytest tests/ (WEB_DIR=/nonexistent)          -> exit 0, no FAILED/ERROR lines
+  (WEB_DIR note: the baked /srv/web makes GET / serve the static landing page, which
+  does not carry the version markup groundwork.testing asserts. The test suite runs
+  against source-checkout semantics, as app/main.py documents. Recorded for LOOP_STATE.)
+- npm run build (web/)                          -> exit 0, static export complete
+
+Browser E2E against the local stack (Playwright, headless):
+1. /demo/ renders; session opened keylessly (entry-path seeding).
+2. Section 1 "The resume": seeded candidate Jordan Alvarez active, upload panel present.
+3. Section 2: both seeded cards render verdicts (apply / do not apply). "Why?" on
+   Platform Engineer loaded 4 requirement rows.
+4. Custom JD pasted (platform engineer, 4 requirements incl. 3 the seeded candidate
+   lacks). Chain create -> parse -> fit ran with the real extraction model:
+   card "Test Platform Role" appeared with honest verdict "do not apply".
+   "Why?" table: kubernetes_production* matched (direct evidence), terraform_iac* gap,
+   on_call_incident_response* gap, golang gap. Case-against rendered. No ids shown
+   anywhere in the flow.
+5. Compile on the seeded apply job ran the full LLM + linker + entailment path to
+   "The compiled page" (bullets with entailment chips rendered).
+
+Not exercised locally: upload+extract (rides Obj 2 PDF/docx comparison, next pass),
+docx download (unchanged code path, proven in production walkthrough of v0.3.1).

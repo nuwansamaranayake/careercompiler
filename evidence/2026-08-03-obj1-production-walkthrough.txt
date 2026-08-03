@@ -1,0 +1,28 @@
+Objective 1 pass condition — production browser walkthrough
+2026-08-03 ~02:55 UTC, https://careercompiler.aigniteconsulting.ai/demo/
+Deployed: v0.3.2, SHA 82ae595, CI run 30779849428 (success on that exact SHA).
+
+Flow, one continuous browser session (Playwright, real page code, no API calls by hand):
+1. Start the demo — session opened, seeded candidate Jordan Alvarez active.
+2. Uploaded riley-chen-resume.pdf (1150 B, single-column text PDF) through the page's
+   file input. Extract: 19 facts stored, 0 rejected on span anchoring.
+   The uploaded resume became the working resume ("your upload" chip, switch-back offered).
+3. Pasted a job posting (Platform Engineer, Delta Ridge Energy: k8s, terraform, CI/CD,
+   on-call must-haves + leadership nice-to-have). Chain create -> parse -> fit ran
+   in-page: card appeared with verdict "apply".
+4. "Why?": 5 requirement rows — kubernetes_production* matched (direct),
+   terraform_iac* matched (direct), ci_cd_ownership* matched (direct),
+   on_call_response* matched (direct), team_leadership partial (transferable, honest).
+5. Compile: reached "The compiled page" — 19 bullets, 19 of 28 budget lines,
+   gate MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli @ 6f5cf0a2b59c threshold 0.7,
+   per-bullet entailment 0.70–1.00 rendered.
+6. No candidate id, job id, or any internal id visible anywhere in the flow
+   (checked the full page text for id patterns: none).
+
+The 0-rejection extraction on a clean single-column PDF is the first data point for
+Objective 2's format investigation (the 35/138 rejection resume was a real-world PDF).
+
+Deploy record: snapshot action 107426401 success 2026-08-03T02:35:50Z (before deploy).
+Migration check on boot: "MIGRATION OK: 11 tables". Public smoke: / 200, /demo/ 200,
+/health 200, /api/v1/demo 503 (prod guard intact). TLS notAfter Oct 25 2026, checked
+from the deploy host.
