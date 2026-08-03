@@ -1,0 +1,544 @@
+# H6: one-hour docker stats watch after the v0.3.x deploy on beacon-gom.
+# 60 samples, 23:47:42Z..00:49:35Z, 2026-08-03. Verdict: no rollback condition.
+# careercompiler peak 731.2MiB of 1.465GiB cap (~49%); beacon-gom-backend peak 260.4MiB, unconstrained.
+
+23:47:42Z
+careercompiler-service-1 0B / 0B 0.00%
+careercompiler-redis-1 3.406MiB / 192MiB 0.29%
+careercompiler-db-1 26.04MiB / 512MiB 0.00%
+careercompiler-minio-1 82.89MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.23%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.14%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:48:45Z
+careercompiler-service-1 391.8MiB / 1.465GiB 90.34%
+careercompiler-redis-1 3.406MiB / 192MiB 0.24%
+careercompiler-db-1 28.11MiB / 512MiB 0.02%
+careercompiler-minio-1 82.95MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.20%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:49:48Z
+careercompiler-service-1 687MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.75MiB / 192MiB 1.62%
+careercompiler-db-1 28.3MiB / 512MiB 0.00%
+careercompiler-minio-1 83.11MiB / 384MiB 0.02%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.23%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:50:51Z
+careercompiler-service-1 687MiB / 1.465GiB 0.14%
+careercompiler-redis-1 5.75MiB / 192MiB 0.26%
+careercompiler-db-1 28.4MiB / 512MiB 5.59%
+careercompiler-minio-1 83.12MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.22%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:51:53Z
+careercompiler-service-1 687MiB / 1.465GiB 0.15%
+careercompiler-redis-1 5.773MiB / 192MiB 0.27%
+careercompiler-db-1 28.52MiB / 512MiB 0.01%
+careercompiler-minio-1 83.12MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.26%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:52:56Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.773MiB / 192MiB 0.81%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.13MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.29%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:53:59Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.21%
+careercompiler-redis-1 5.773MiB / 192MiB 0.34%
+careercompiler-db-1 29.28MiB / 512MiB 7.49%
+careercompiler-minio-1 83.11MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.44%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.33%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:55:02Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.25%
+careercompiler-redis-1 5.773MiB / 192MiB 3.70%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.12MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 19.89%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.19%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:56:05Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.773MiB / 192MiB 0.28%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.12MiB / 384MiB 0.02%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.22%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:57:08Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.21%
+careercompiler-redis-1 5.773MiB / 192MiB 0.28%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.13MiB / 384MiB 0.02%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:58:11Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.25%
+careercompiler-redis-1 5.77MiB / 192MiB 2.94%
+careercompiler-db-1 28.52MiB / 512MiB 0.63%
+careercompiler-minio-1 83.13MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.32%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.91%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+23:59:14Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.77MiB / 192MiB 0.39%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.11MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.27%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:00:17Z
+careercompiler-service-1 687.6MiB / 1.465GiB 1.51%
+careercompiler-redis-1 5.766MiB / 192MiB 14.76%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.12MiB / 384MiB 0.56%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.74%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.28%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.09MiB / 15.62GiB 0.00%
+00:01:27Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.43%
+careercompiler-redis-1 7.457MiB / 192MiB 4.51%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.12MiB / 384MiB 0.21%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.94%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.31%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:02:30Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.20%
+careercompiler-redis-1 5.77MiB / 192MiB 0.32%
+careercompiler-db-1 28.52MiB / 512MiB 1.90%
+careercompiler-minio-1 83.13MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.47%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 6.99%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:03:33Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.17%
+careercompiler-redis-1 5.77MiB / 192MiB 0.28%
+careercompiler-db-1 28.52MiB / 512MiB 0.00%
+careercompiler-minio-1 83.21MiB / 384MiB 0.40%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.46%
+beacon-gom-backend-1 260.2MiB / 15.62GiB 27.01%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:04:36Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.17%
+careercompiler-redis-1 5.77MiB / 192MiB 0.38%
+careercompiler-db-1 28.52MiB / 512MiB 0.02%
+careercompiler-minio-1 83.19MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.25%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:05:38Z
+careercompiler-service-1 687.6MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.77MiB / 192MiB 2.47%
+careercompiler-db-1 29.3MiB / 512MiB 0.37%
+careercompiler-minio-1 83.19MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.27%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:06:41Z
+careercompiler-service-1 187MiB / 1.465GiB 0.22%
+careercompiler-redis-1 5.777MiB / 192MiB 0.30%
+careercompiler-db-1 28.4MiB / 512MiB 7.74%
+careercompiler-minio-1 83.2MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.25%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.20%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:07:44Z
+careercompiler-service-1 729.9MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.789MiB / 192MiB 0.32%
+careercompiler-db-1 30.37MiB / 512MiB 0.00%
+careercompiler-minio-1 83.2MiB / 384MiB 0.19%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.29%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.21%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:08:47Z
+careercompiler-service-1 730.9MiB / 1.465GiB 0.15%
+careercompiler-redis-1 5.789MiB / 192MiB 0.27%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.22%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.21%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:09:50Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.789MiB / 192MiB 0.36%
+careercompiler-db-1 30.45MiB / 512MiB 0.82%
+careercompiler-minio-1 83.32MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.20%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:10:52Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.789MiB / 192MiB 0.28%
+careercompiler-db-1 30.45MiB / 512MiB 7.88%
+careercompiler-minio-1 83.32MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.30%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.20%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:11:55Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.17%
+careercompiler-redis-1 5.789MiB / 192MiB 0.30%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.33MiB / 384MiB 0.08%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.32%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.22%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:12:58Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.30%
+careercompiler-redis-1 5.785MiB / 192MiB 7.50%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.33MiB / 384MiB 0.07%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.23%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:14:01Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.785MiB / 192MiB 0.42%
+careercompiler-db-1 30.45MiB / 512MiB 0.01%
+careercompiler-minio-1 83.31MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 1.20%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.31%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:15:04Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.22%
+careercompiler-redis-1 5.785MiB / 192MiB 0.36%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.32MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.66%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.32%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:16:07Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.785MiB / 192MiB 0.36%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.32MiB / 384MiB 0.12%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.26%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:17:09Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.17%
+careercompiler-redis-1 5.785MiB / 192MiB 0.32%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.33MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.27%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.20%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.094MiB / 15.62GiB 0.00%
+00:18:12Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 0.32%
+careercompiler-db-1 30.46MiB / 512MiB 6.79%
+careercompiler-minio-1 83.34MiB / 384MiB 0.15%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.26%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:19:15Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.785MiB / 192MiB 0.46%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.32MiB / 384MiB 0.13%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.37%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 5.01%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:20:18Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.785MiB / 192MiB 0.96%
+careercompiler-db-1 30.45MiB / 512MiB 0.01%
+careercompiler-minio-1 83.32MiB / 384MiB 0.10%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.70%
+beacon-gom-backend-1 260.2MiB / 15.62GiB 28.36%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:21:21Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.21%
+careercompiler-redis-1 5.785MiB / 192MiB 0.25%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.33MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.19%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:22:23Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 0.25%
+careercompiler-db-1 30.46MiB / 512MiB 5.11%
+careercompiler-minio-1 83.34MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.23%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:23:26Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.22%
+careercompiler-redis-1 5.785MiB / 192MiB 0.26%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.01%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.23%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.03%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.05%
+00:24:29Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.20%
+careercompiler-redis-1 5.785MiB / 192MiB 0.42%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.32MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.082MiB / 15.62GiB 0.00%
+00:25:32Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.13%
+careercompiler-redis-1 5.785MiB / 192MiB 0.30%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.33MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.30%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.15%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.082MiB / 15.62GiB 0.00%
+00:26:34Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.35%
+careercompiler-redis-1 5.785MiB / 192MiB 4.29%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.29%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.16%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.01%
+beacon-gom-nginx-1 5.082MiB / 15.62GiB 0.02%
+00:27:37Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 0.25%
+careercompiler-db-1 30.46MiB / 512MiB 0.01%
+careercompiler-minio-1 83.34MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.39%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:28:40Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.21%
+careercompiler-redis-1 5.785MiB / 192MiB 0.31%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:29:42Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.785MiB / 192MiB 2.99%
+careercompiler-db-1 30.46MiB / 512MiB 6.46%
+careercompiler-minio-1 83.33MiB / 384MiB 0.10%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.21%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:30:45Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.785MiB / 192MiB 4.18%
+careercompiler-db-1 30.45MiB / 512MiB 6.09%
+careercompiler-minio-1 83.34MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.22%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:31:48Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.21%
+careercompiler-redis-1 5.785MiB / 192MiB 0.33%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.02%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.25%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.20%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:32:51Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.785MiB / 192MiB 0.27%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.04%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.16%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:33:53Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 3.32%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.36MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.26%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:34:56Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 0.30%
+careercompiler-db-1 30.45MiB / 512MiB 0.01%
+careercompiler-minio-1 83.34MiB / 384MiB 0.02%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 260.4MiB / 15.62GiB 0.87%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:35:59Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.19%
+careercompiler-redis-1 5.785MiB / 192MiB 0.64%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.07%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.52%
+beacon-gom-backend-1 260.2MiB / 15.62GiB 2.82%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:37:02Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.785MiB / 192MiB 3.88%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.40%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.27%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:38:05Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.15%
+careercompiler-redis-1 5.785MiB / 192MiB 0.27%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.13%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.23%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.22%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:39:07Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.20%
+careercompiler-redis-1 5.785MiB / 192MiB 0.29%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.33MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.28%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.18%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:40:10Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.22%
+careercompiler-redis-1 5.785MiB / 192MiB 3.63%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.40%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.21%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:41:13Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.17%
+careercompiler-redis-1 5.785MiB / 192MiB 0.34%
+careercompiler-db-1 30.46MiB / 512MiB 6.80%
+careercompiler-minio-1 83.34MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.27%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.19%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:42:16Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.18%
+careercompiler-redis-1 5.785MiB / 192MiB 0.30%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.19%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:43:19Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.17%
+careercompiler-redis-1 5.785MiB / 192MiB 3.11%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.36MiB / 384MiB 0.05%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.16%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:44:21Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.15%
+careercompiler-redis-1 5.785MiB / 192MiB 0.31%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.25%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:45:24Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 0.30%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.34MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.29%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:46:27Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.14%
+careercompiler-redis-1 5.785MiB / 192MiB 0.28%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.06%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.25%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:47:30Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 2.94%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.00%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.17%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:48:32Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.15%
+careercompiler-redis-1 5.785MiB / 192MiB 0.33%
+careercompiler-db-1 30.46MiB / 512MiB 0.00%
+careercompiler-minio-1 83.36MiB / 384MiB 0.40%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.24%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.20%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%
+00:49:35Z
+careercompiler-service-1 731.2MiB / 1.465GiB 0.16%
+careercompiler-redis-1 5.785MiB / 192MiB 0.36%
+careercompiler-db-1 30.45MiB / 512MiB 0.00%
+careercompiler-minio-1 83.35MiB / 384MiB 0.03%
+beacon-gom-mcp-server-1 83.86MiB / 15.62GiB 0.53%
+beacon-gom-backend-1 236.1MiB / 15.62GiB 0.16%
+beacon-gom-frontend-1 4.871MiB / 15.62GiB 0.00%
+beacon-gom-nginx-1 5.086MiB / 15.62GiB 0.00%

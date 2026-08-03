@@ -60,7 +60,7 @@ exit 0, G6 walkthrough green.** Tags: careercompiler v0.3.0 + v0.3.1, portfolio-
 | G1–G5 | done | `evidence/2026-08-03-postdeploy-smoke.txt` exit 0; TLS chain verify 0 (ok); 11 tables |
 | G6 | done | production walkthrough evidence above |
 | H1–H5, H7, H8 | done | CI-green tags; README/EVAL/DECISIONS/FAILURES current |
-| H6 1-hour watch | **in progress** | sampler on host writes /tmp/cc-stats-watch.log every 60s; peak so far 687.6/1500 MiB; final check due ~00:55Z |
+| H6 1-hour watch | done | `evidence/2026-08-03-h6-stats-watch.txt` — 60 samples, peak 731.2 MiB of 1500 (~49%), Beacon GoM unaffected, no rollback |
 | FAIL-0009 | recorded | 3-min 502 from stale EXPECTED_TABLE_COUNT; guard worked, checklist gap fixed |
 
 Deferred (BLOCKED.md): C4 paraphrase stability, threshold calibration, F1 ATS parse-back.
