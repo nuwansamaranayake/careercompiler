@@ -534,6 +534,8 @@ function UploadPanel({ session, guard, onReady }: {
   const [state, setState] = useState<"idle" | "up" | "extracting" | "done">("idle");
   const [msg, setMsg] = useState("");
   const [stats, setStats] = useState<{ stored: number; rejected: number } | null>(null);
+  const [rejects, setRejects] = useState<{ claim_key: string; statement: string; quote: string | null }[]>([]);
+  const [showRejects, setShowRejects] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const upload = async () => {
@@ -549,10 +551,12 @@ function UploadPanel({ session, guard, onReady }: {
       if (!r.ok) { setMsg(`upload failed: HTTP ${r.status} — ${(await r.json()).detail ?? ""}`); setState("idle"); return; }
       const { candidate_id } = await r.json();
       setState("extracting");
-      const ex = await api<{ stored: number; rejected_span_anchor: number }>(
+      const ex = await api<{ stored: number; rejected_span_anchor: number;
+        rejected?: { claim_key: string; statement: string; quote: string | null }[] }>(
         session.token, `/api/v1/candidates/${candidate_id}/claims/extract`, { method: "POST" });
       const st = { stored: ex.stored, rejected: ex.rejected_span_anchor };
       setStats(st);
+      setRejects(ex.rejected ?? []);
       setState("done");
       onReady(candidate_id, st);
     } catch (e) { setMsg(guard(e)); setState("idle"); }
@@ -575,12 +579,33 @@ function UploadPanel({ session, guard, onReady }: {
       </p>
       {msg && <p className="err small">{msg}</p>}
       {state === "done" && stats && (
-        <p className="small">
-          Extracted <strong>{stats.stored}</strong> facts from your resume
-          {stats.rejected > 0 && <>; <strong>{stats.rejected}</strong> rejected on span anchoring
-          (they will never match)</>}. It is now the working resume — run a fit on a seeded
-          job, or paste a posting below.
-        </p>
+        <>
+          <p className="small">
+            Extracted <strong>{stats.stored}</strong> facts from your resume
+            {stats.rejected > 0 && <>; <strong>{stats.rejected}</strong> rejected on span anchoring
+            (they will never match)</>}. It is now the working resume — run a fit on a seeded
+            job, or paste a posting below.
+          </p>
+          {rejects.length > 0 && (
+            <div className="small">
+              <p className="dim" style={{ margin: "0.3rem 0" }}>
+                A rejection is the anchor check working, not an error: every fact must quote
+                your document verbatim, and these could not be located in it.{" "}
+                <button className="secondary" onClick={() => setShowRejects(!showRejects)}>
+                  {showRejects ? "Hide them" : `Show the ${rejects.length} rejected`}
+                </button>
+              </p>
+              {showRejects && rejects.map((x, i) => (
+                <p key={i} style={{ margin: "0.2rem 0" }}>
+                  <code>{x.claim_key}</code> — {x.statement}<br />
+                  <span className="dim">offered as evidence: “{x.quote ?? "(empty quote)"}” —
+                  not found verbatim in your document, so it will never match a requirement
+                  or reach a page.</span>
+                </p>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

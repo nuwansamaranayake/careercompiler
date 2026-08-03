@@ -33,11 +33,17 @@ class Provenance(str, Enum):
 
 class AtomicClaim(BaseModel):
     """One verifiable career fact. `core` is the portfolio-wide claim atom (provenance,
-    bitemporality, verification state); the app adds its typed key and sourcing flag."""
+    bitemporality, verification state); the app adds its typed key and sourcing flag.
+
+    `failed_quote` is transient extraction context, never persisted: the verbatim quote the
+    model offered as evidence when that quote could not be located in the source. It exists
+    so a rejection can be shown as what it is — the anchor check working — instead of a
+    bare count."""
     core: Claim
     claim_key: str = Field(min_length=1)
     kind: FactKind
     provenance: Provenance
+    failed_quote: str | None = None
 
 
 EXTRACTION_SCHEMA = {
@@ -138,6 +144,7 @@ def extract_facts(
             claim_key=item["claim_key"],
             kind=FactKind(item["kind"]),
             provenance=Provenance.document_sourced,
+            failed_quote=None if anchored else quote,
         ))
     return claims
 

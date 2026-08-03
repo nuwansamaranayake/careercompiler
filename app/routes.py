@@ -213,8 +213,13 @@ def extract_claims(cid: int, authorization: str | None = Header(default=None)):
     claims = extract_facts(gateway, settings.llm_model_extraction, doc.text, doc.name)
     with db.get_session() as s, s.begin():
         n = _store_claims(s, cid, claims)
-    rejected = sum(1 for c in claims if c.core.verification.status == "rejected")
-    return {"stored": n, "rejected_span_anchor": rejected, "provenance": "document_sourced"}
+    # Rejections are the anchor check working, so they ship with their evidence: the
+    # claim, and the quote the model offered that the source does not contain verbatim.
+    rejected = [c for c in claims if c.core.verification.status == "rejected"]
+    return {"stored": n, "rejected_span_anchor": len(rejected),
+            "rejected": [{"claim_key": c.claim_key, "statement": c.core.statement,
+                          "quote": c.failed_quote} for c in rejected],
+            "provenance": "document_sourced"}
 
 
 @router.post("/jobs", status_code=201)
