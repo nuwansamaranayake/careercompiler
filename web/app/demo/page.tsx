@@ -579,16 +579,16 @@ function LetterPanel({ session, jobId, candidateId, guard }: {
     }
   };
 
-  const download = async () => {
+  const download = async (fmt: "pdf" | "docx" = "pdf") => {
     if (!letter) return;
     try {
-      const r = await fetch(`/api/v1/compile/${letter.document_id}/docx`, {
+      const r = await fetch(`/api/v1/compile/${letter.document_id}/${fmt}`, {
         headers: { Authorization: `Bearer ${session.token}` } });
       if (!r.ok) { setDlMsg(`download failed: HTTP ${r.status}`); return; }
       const blob = await r.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `careercompiler-letter-${letter.document_id}.docx`;
+      a.download = `careercompiler-letter-${letter.document_id}.${fmt}`;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e) { setDlMsg(friendly(e)); }
@@ -632,7 +632,7 @@ function LetterPanel({ session, jobId, candidateId, guard }: {
           keeps it short; the resume carries the full evidence.
         </p>
       )}
-      <p><button onClick={download}>Download the letter docx</button>{" "}
+      <p><button onClick={() => download("pdf")}>Download the PDF</button>{" "}<button className="secondary" onClick={() => download("docx")}>docx</button>{" "}
         <span className="dim small">the provenance map ships inside the document</span></p>
       {dlMsg && <p className="err small">{dlMsg}</p>}
     </>
@@ -643,15 +643,15 @@ function CompiledView({ doc, prov, session, guard }: {
   doc: Compiled; prov: ProvBullet[]; session: Session; guard: (e: unknown) => string;
 }) {
   const [dlMsg, setDlMsg] = useState("");
-  const download = async () => {
+  const download = async (fmt: "pdf" | "docx" = "pdf") => {
     try {
-      const r = await fetch(`/api/v1/compile/${doc.document_id}/docx`, {
+      const r = await fetch(`/api/v1/compile/${doc.document_id}/${fmt}`, {
         headers: { Authorization: `Bearer ${session.token}` } });
       if (!r.ok) { setDlMsg(`download failed: HTTP ${r.status}`); return; }
       const blob = await r.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `careercompiler-${doc.document_id}.docx`;
+      a.download = `careercompiler-${doc.document_id}.${fmt}`;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e) { setDlMsg(friendly(e)); }
@@ -690,7 +690,7 @@ function CompiledView({ doc, prov, session, guard }: {
         <p className="err small">Must-have requirements without evidence on this page:{" "}
           {doc.uncovered_must.join(", ")}</p>
       )}
-      <p><button onClick={download}>Download the docx</button>{" "}
+      <p><button onClick={() => download("pdf")}>Download the PDF</button>{" "}<button className="secondary" onClick={() => download("docx")}>docx</button>{" "}
         <span className="dim small">the provenance map ships inside the document</span></p>
       {dlMsg && <p className="err small">{dlMsg}</p>}
     </>

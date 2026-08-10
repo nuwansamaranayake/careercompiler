@@ -33,6 +33,7 @@ from . import db, demo
 from .config import settings
 from .engine import entailment, linker
 from .engine.docx_out import letter_scaffold, render_docx, render_letter_docx
+from .engine.pdf_out import render_letter_pdf, render_pdf
 from .engine.embedding import (EmbedderUnavailable, HashingEmbedder,
                                OpenRouterEmbedder)
 from .engine.entailment import EntailmentUnavailable
@@ -961,3 +962,40 @@ async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
         s.execute(db.source_documents.insert().values(
             candidate_id=cid, name=fn, text=text))
     return {"candidate_id": cid, "chars": len(text)}
+
+
+@router.get("/compile/{did}/pdf")
+def get_compiled_pdf(did: int, authorization: str | None = Header(default=None)):
+    """The print-grade artifact. Same gates, same provenance, same tenancy as the docx —
+    a PDF is what actually gets attached to an application, so it ships the provenance
+    appendix too."""
+    scope = _auth(authorization)
+    with db.get_session() as s:
+        doc, bullets, omissions = _load_document(s, did)
+        _guard(s, scope, candidate_id=doc["candidate_id"])
+        claims = {c.core.claim_id: c for c in _load_claims(s, doc["candidate_id"])}
+        cand = s.execute(sa.select(db.candidates.c.name)
+                         .where(db.candidates.c.id == doc["candidate_id"])).first()
+        job = s.execute(sa.select(db.job_postings.c.title)
+                        .where(db.job_postings.c.id == doc["job_id"])).first()
+    note = (f"NLI {doc['nli_model']}@{doc['nli_revision'][:12]}, "
+            f"threshold {doc['nli_threshold']}")
+    name = _display(cand.name) if cand else "unknown"
+    title = _display(job.title) if job else "unknown"
+    if doc.get("kind") == "cover_letter":
+        payload = render_letter_pdf(
+            candidate_name=name, job_title=title,
+            sentences=[dict(b) for b in bullets], claims_by_id=claims,
+            entailment_note=note, frame=letter_scaffold(name, title))
+        stem = f"careercompiler-letter-{did}"
+    else:
+        payload = render_pdf(
+            candidate_name=name, job_title=title,
+            bullets=[dict(b) for b in bullets], claims_by_id=claims,
+            omissions=[Omission(o["claim_id"], o["claim_key"],
+                                OmissionReason(o["reason"]), o["detail"])
+                       for o in omissions],
+            entailment_note=note)
+        stem = f"careercompiler-{did}"
+    return Response(content=payload, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{stem}.pdf"'})
