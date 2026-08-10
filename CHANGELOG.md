@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-03
+
+### Added
+- **Professional downloadable PDF** (`GET /api/v1/compile/{did}/pdf`), resume and cover
+  letter by document kind, with the provenance appendix inside the file — fact keys, fact
+  ids, entailment scores, and the footer statement on every page. ReportLab, pure Python,
+  inside the 1.9 GB image assertion where a docx-to-PDF converter would not fit. Proven by
+  pypdf read-back (name, bullets, provenance, scores all extractable), not by magic bytes.
+  PDF-first download buttons in the demo; docx one click away.
+
+### Measured
+- Local synthetic E2E, 9/9: session -> both verdicts -> compile (5 bullets, min
+  entailment 0.994) -> resume PDF 3,978 bytes and letter PDF 4,173 bytes, both read back;
+  no-token PDF stays 401.
+
 ## [0.4.1] - 2026-08-03
 
 The gate gets a feedback path; the gate itself does not move.
