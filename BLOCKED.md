@@ -45,3 +45,7 @@
   `git merge-base --is-ancestor 00579ef 51ca391` → true, so the tagged groundwork
   refactor IS contained in production v0.4.0. The tag stays; nothing points at code
   that never shipped.
+- **Image margin is thin again (2026-08-10):** v0.5.0 measures 1.89 GB against the 1.9
+  assertion — reportlab cost ~20 MB and the coin-flip margin DECISION 003 warned about is
+  back. Next size wave should prune before any further dependency (candidates: reportlab
+  docs/tests dirs, transformers unused model classes) or the next patch release goes red.

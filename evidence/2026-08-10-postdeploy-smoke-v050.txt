@@ -1,0 +1,48 @@
+run namespace: smoke-20260810T054106Z-   retention window: 7 days
+
+APP             TLS    HLTH  GUARD  TABLES   VERDICT
+seismograph     valid  200   503    9/9      GET / -> 200 text/html 5257B PASS
+careercompiler  valid  200   503    11/11    GET / -> 200 text/html 12003B PASS
+mycelium        valid  200   503    9/9      GET / -> 200 text/html 10832B PASS
+triage          valid  200   503    9/9      GET / -> 200 text/html 5736B PASS
+almanac         valid  200   503    9/9      GET / -> 200 text/html 6053B PASS
+parallax        valid  200   503    9/9      GET / -> 200 text/html 6082B PASS
+
+--- seismograph ---
+  write : POST /runs -> gate=pass cells=1
+  read  : GET /reports -> runs=1 metrics=1
+  rows  : contracts=37, runs=37, consistency_metrics=38, gate_decisions=37
+  retain: {'aged_namespaces': 16, 'deleted': 96, 'remaining': 10}
+  logs  : silent (no errors)
+--- careercompiler ---
+  write : POST /fit -> verdict=do_not_apply gaps=1; compile -> doc=57 bullets=2 min_entail=0.997
+  read  : GET /fit/109 -> rows=2; planted inflation+number rejected; no-token 401x3; demo cross-tenant 403
+  rows  : candidates=80, atomic_claims=1225, job_postings=127, requirements=380, fit_reports=109, match_scores=351, compiled_documents=57, rendered_bullets=421
+  retain: {'aged_namespaces': 32, 'deleted': 1459, 'remaining': 88}
+  logs  : silent (no errors)
+--- mycelium ---
+  write : POST /documents -> passages=2
+  read  : POST /query -> hits=2 top='smoke-20260810T054106Z-trave' freshness=aging acl_leak=0; demo cross-tenant 0; restricted-seed excluded=108; no-token 401x2
+  rows  : documents=111, passages=146, principals=108, acl_entries=168, queries=109, retrievals=109
+  retain: {'aged_namespaces': 16, 'deleted': 160, 'remaining': 48}
+  logs  : silent (no errors)
+--- triage ---
+  write : POST /feedback/import + /triage/run -> clusters=35
+  read  : GET /issues/39 -> state=triaged freq=3 severity=1.518
+  rows  : feedback_items=105, aspects=70, clusters=35, issues=35, issue_transitions=34, severity_scores=674
+  retain: {'aged_namespaces': 16, 'deleted': 447, 'remaining': 10}
+  logs  : silent (no errors)
+--- almanac ---
+  write : POST /ingest+/forecasts+/envelopes -> qty 136.906/142.55/142.55
+  read  : GET /envelopes/38 -> point_qty=142.55
+  rows  : skus=36, sales_records=1008, repaired_demand=1008, forecasts=36, forecast_points=252, action_envelopes=36
+  retain: {'aged_namespaces': 16, 'deleted': 1072, 'remaining': 10}
+  logs  : silent (no errors)
+--- parallax ---
+  write : POST /drift/compute -> top=checkout drift_index=0.8333
+  read  : GET /drift -> rows=2 brief_stats=16
+  rows  : projects=36, workstreams=72, claimed_items=140, observed_commits=72, drift_indices=72, briefs=35, brief_stats=560
+  retain: {'aged_namespaces': 16, 'deleted': 480, 'remaining': 10}
+  logs  : silent (no errors)
+
+ESTATE SMOKE OK: 6 apps, business loops and database truth verified

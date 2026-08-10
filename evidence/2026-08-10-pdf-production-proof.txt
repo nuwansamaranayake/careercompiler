@@ -1,0 +1,14 @@
+# Goal proof against https://careercompiler.aigniteconsulting.ai (v0.5.0, SHA 3f954ba),
+# 2026-08-10. Synthetic data only; real gates; PDF read back with pypdf.
+
+  PASS  session (synthetic)
+  PASS  verdicts: apply AND do-not-apply
+  PASS  customized resume compiles  status=201
+  PASS  PDF downloads from production  bytes=3978
+  PASS  PDF reads back: name + provenance + gate note
+  PASS  no-token PDF is 401
+PROD PDF PROOF OK: 6 checks against the live host
+
+# Local synthetic E2E before deploy: 9/9 including letter PDF (4,173 bytes) and gate
+# scores min 0.994. Estate gate after deploy: exit 0, all six apps
+# (2026-08-10-postdeploy-smoke-v050.txt). MIGRATION OK: 11 tables. Image 1.89 GB.
