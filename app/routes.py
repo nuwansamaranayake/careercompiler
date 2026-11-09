@@ -763,7 +763,13 @@ def check_bullet(body: CheckIn, authorization: str | None = Header(default=None)
         _guard(s, scope, candidate_id=doc["candidate_id"])
         claims = _load_claims(s, doc["candidate_id"])
 
-    bullet = Bullet(text=body.text, cites=body.cites)
+    return _gate_sentence(Bullet(text=body.text, cites=body.cites), claims)
+
+
+def _gate_sentence(bullet: Bullet, claims: list[AtomicClaim]) -> dict:
+    """Both gates on one sentence against its cited facts. One implementation for the
+    live check and the saved edit, so "would this compile?" and "save this" can never
+    disagree about what passes."""
     link = linker.check([bullet], claims, selected_ids=None)
     link_violations = [{"failure": v.failure.value, "detail": v.detail}
                       for v in link.violations]
@@ -786,6 +792,44 @@ def check_bullet(body: CheckIn, authorization: str | None = Header(default=None)
     return {"ok": link.ok and bool(entail.get("ok", False)),
             "reference_integrity": {"ok": link.ok, "violations": link_violations},
             "entailment": entail}
+
+
+class EditIn(BaseModel):
+    text: str = Field(min_length=1)
+
+
+@router.put("/compile/{did}/bullets/{position}")
+def edit_bullet(did: int, position: int, body: EditIn,
+                authorization: str | None = Header(default=None)):
+    """Modification with the gates still closed. The edited sentence keeps the cites it
+    was compiled with and must pass the same two gates as the compile; only then does it
+    replace the stored line, so the PDF and docx can never carry an ungated sentence.
+    A rejection is a 422 carrying the same evidence `/compile/check` returns."""
+    scope = _auth(authorization)
+    with db.get_session() as s:
+        doc, bullets, _ = _load_document(s, did)
+        _guard(s, scope, candidate_id=doc["candidate_id"])
+        row = next((b for b in bullets if b["position"] == position), None)
+        if row is None:
+            raise HTTPException(status_code=404,
+                                detail="no line at that position in this document")
+        claims = _load_claims(s, doc["candidate_id"])
+
+    # Gates run outside the session: the entailment model must never hold a connection.
+    verdict = _gate_sentence(Bullet(text=body.text, cites=list(row["cites"])), claims)
+    if not verdict["ok"]:
+        raise HTTPException(status_code=422, detail={
+            "error": "edit_rejected",
+            "reference_integrity": verdict["reference_integrity"],
+            "entailment": verdict["entailment"]})
+
+    score = verdict["entailment"]["score"]
+    with db.get_session() as s, s.begin():
+        s.execute(db.rendered_bullets.update()
+                  .where(db.rendered_bullets.c.id == row["id"])
+                  .values(text=body.text, entailment=score))
+    return {"document_id": did, "position": position, "saved": True,
+            "text": body.text, "cites": list(row["cites"]), "entailment": score}
 
 
 class InterviewPackIn(BaseModel):

@@ -18,3 +18,6 @@ data/local/
 
 # Private real-corpus fixtures: personal data + third-party postings. Never commit.
 fixtures/private/
+
+# Pre-edit file backups (operator rule); never committed.
+backup/

@@ -34,20 +34,44 @@ def demo():
 # a source checkout, the test suite — the legacy single-file page serves. Both carry the
 # EVAL.md limits block verbatim, and the deploy gate asserts that against whatever is live.
 _WEB = Path(os.getenv("WEB_DIR", "/srv/web"))
+_MOUNTED_DIRS = ("_next", "assets")
+_HTML = "text/html; charset=utf-8"
 
-if (_WEB / "index.html").exists():
-    app.mount("/_next", StaticFiles(directory=_WEB / "_next"), name="next-assets")
 
-    @app.get("/", include_in_schema=False)
-    def root() -> FileResponse:
-        return FileResponse(_WEB / "index.html", media_type="text/html; charset=utf-8")
+def mount_frontend(app: FastAPI, web: Path) -> bool:
+    """Serve the static export file by file. Returns False when there is no build.
 
-    @app.get("/demo", include_in_schema=False)
-    @app.get("/demo/", include_in_schema=False)
-    def demo_page() -> FileResponse:
-        return FileResponse(_WEB / "demo" / "index.html",
-                            media_type="text/html; charset=utf-8")
-else:
+    The routes come from one directory listing taken at startup, so no request path is
+    ever joined to the filesystem: a URL that is not a built file is a 404 by
+    construction. A page `x/index.html` answers at `/x` and `/x/`. Routes registered
+    before this call (the API, /health) win, so a build can never shadow them.
+    """
+    if not (web / "index.html").exists():
+        return False
+    for name in _MOUNTED_DIRS:
+        if (web / name).is_dir():
+            app.mount(f"/{name}", StaticFiles(directory=web / name), name=f"web-{name}")
+
+    def serve(url: str, path: Path, media_type: str | None) -> None:
+        app.add_api_route(
+            url, lambda: FileResponse(path, media_type=media_type),
+            methods=["GET"], include_in_schema=False)
+
+    for path in sorted(p for p in web.rglob("*") if p.is_file()):
+        rel = path.relative_to(web)
+        if rel.parts[0] in _MOUNTED_DIRS:
+            continue
+        if rel.name == "index.html":
+            page = "/".join(rel.parts[:-1])
+            serve(f"/{page}", path, _HTML)
+            if page:
+                serve(f"/{page}/", path, _HTML)
+        else:
+            serve("/" + rel.as_posix(), path, _HTML if path.suffix == ".html" else None)
+    return True
+
+
+if not mount_frontend(app, _WEB):
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def root() -> HTMLResponse:
         return HTMLResponse(content=render_front_page(),
