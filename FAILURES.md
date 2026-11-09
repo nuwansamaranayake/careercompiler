@@ -336,3 +336,8 @@ the tables; it did not ask the dependency.
 
 Also found by this deploy and fixed in the release: guide pictures were served as
 `application/octet-stream` because the slim base image has no MIME table (CHANGELOG 0.6.0).
+
+**Closed 2026-11-09, same day.** New key issued by the operator and placed on the host;
+v0.6.0 redeployed; demo-path gate and estate gate both pass. The deploy also surfaced
+that retention had not run since at least 2026-09-08 (BLOCKED.md): the sweep lives inside
+the estate smoke, and the estate smoke had not completed in two months.

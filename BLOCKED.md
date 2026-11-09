@@ -1,46 +1,27 @@
 # BLOCKED / deferred — needs a decision or scheduled work, with what unblocks it
 
-- **PRODUCTION HAS NO WORKING OPENROUTER KEY, and has not since 2026-08-10. This blocks
-  the v0.6.0 deploy and breaks v0.5.0 today.** The shared key (fingerprint `7E1A03D4`)
-  was revoked on 2026-08-10; `KEY_ROTATION_BLOCKED.md` at the portfolio root lists
-  CareerCompiler among seven apps down on it. Measured 2026-11-09 from the production
-  host, through the app's own embedder, in BOTH the v0.5.0 and the v0.6.0 image:
-  `embeddings endpoint answered 401`. Effect on the live site, either version: a seeded
-  sample verdict loads, and everything that calls a model fails (fact extraction, posting
-  parse, fit with real embeddings, compile, cover letter, interview pack).
-  **Unblocked by the operator only:** issue a new OpenRouter key for CareerCompiler
-  (with a spend cap) and get it into `/opt/aignite-portfolio/careercompiler/.env` on
-  beacon-gom as `OPENROUTER_API_KEY`. Never paste it into a chat: that is how the last
-  one leaked. Then say "deploy CareerCompiler v0.6.0" again.
-- **v0.6.0 was deployed and rolled back on 2026-11-09. Production is v0.5.0 (`3f954ba`).**
-  The operator said "Deploy v0.6.0". What happened, in order:
-  1. Backup at `20261109T160407Z`: running image tagged `careercompiler-service:pre-0.6.0`;
-     `pg_dump` at `/opt/aignite-portfolio/backups/careercompiler-pre-0.6.0-20261109T160407Z.sql.gz`
-     (11 tables, ends cleanly); `compose.prod.yml` and `.env` copied beside it.
-  2. Built `59215a4` on the host in 3 minutes: 1.83 GB, self-check 12 of 12 with no network.
-  3. Swapped. Healthy in 9 seconds, `MIGRATION OK: 11 tables`, Beacon GoM untouched.
-  4. Public smoke from outside passed: `/`, `/workspace/`, `/demo/`, `/guide/` 200 with real
-     content, version 0.6.0, three no-token calls 401, TLS verify 0, 15 of 15 guide
-     pictures rendering in a real browser.
-  5. **Estate gate failed**: `POST /api/v1/fit expected 201, got 503`. Cause: the dead key
-     above, not the release.
-  6. Rolled back per the rule: `pre-0.6.0` retagged `latest`, `up -d`, healthy in 12
-     seconds, version 0.5.0 confirmed from outside. Total time on v0.6.0: about 27 minutes (16:08Z to 16:35Z).
-  The same gate fails on v0.5.0 for the same reason, so no version can be released
-  through it until the key exists. v0.5.0 was left in place as the known state rather
-  than shipping a release whose gate did not pass.
-  **To redeploy once the key is in place** (about 5 minutes; the backup above still stands,
-  and no schema changed):
-  `ssh beacon-gom`, `cd /opt/aignite-portfolio/careercompiler`, `git fetch origin main`,
-  `git checkout --detach origin/main`,
-  `docker compose -f compose.prod.yml build --build-arg APP_VERSION=0.6.0 --build-arg GIT_SHA=<sha> --build-arg BUILD_TIME=<utc> service`,
-  `docker run --rm --network none --entrypoint python careercompiler-service:latest scripts/image_selfcheck.py`,
-  `docker compose -f compose.prod.yml up -d --no-build service`. Then from the workstation
-  `python portfolio-ops/scripts/estate_smoke.py --ssh beacon-gom --app careercompiler`
-  must exit 0. Roll back with `docker tag careercompiler-service:pre-0.6.0 careercompiler-service:latest`
-  and `up -d --no-build service`. Tag `v0.6.0` only after the gate passes.
-  Left on the host: image tag `careercompiler-service:v0.6.0-failed-smoke` (the `59215a4`
-  build; sound, but it predates the media-type fix, so rebuild rather than reuse it).
+- **v0.6.0 IS LIVE (2026-11-09, `9395178`). RESOLVED.** First attempt rolled back on a
+  revoked OpenRouter key (FAIL-0014). The operator issued a new key; it was copied from
+  a local file to the host `.env` without being displayed, and OpenRouter accepted it.
+  Second attempt: backup `20261109T172121Z`, build 1.83 GB, self-check pass, healthy in 9
+  seconds, public smoke pass, demo-path gate pass on the real model in 90 seconds, estate
+  gate exit 0. Rollback remains `docker tag careercompiler-service:pre-0.6.0 careercompiler-service:latest`
+  then `docker compose -f compose.prod.yml up -d --no-build service`.
+  Still on the host: image tags `pre-0.6.0` (v0.5.0) and `v0.6.0-failed-smoke`, and the
+  backups in `/opt/aignite-portfolio/backups`, including two copies of the old `.env`
+  that hold only the revoked key.
+- **Retention only runs when somebody runs the estate smoke (found 2026-11-09).** At
+  deploy time production held 25 session tenants older than 7 days, the oldest from
+  2026-09-08, while the site says such data is deleted once older than 7 days. Nothing
+  on the host schedules the sweep. The estate run at the end of this deploy cleared all
+  25 (148 rows; zero aged tenants remain). It will drift again. Unblocked by scheduling
+  `estate_smoke.py --ssh beacon-gom --app careercompiler` or the sweep alone, daily. That
+  is a standing job on the operator's machine or the host, so it needs the operator's yes.
+- **The estate smoke is fragile from this workstation (2026-11-09).** It opens one SSH
+  connection per SQL statement. With many aged tenants to sweep, one connection failed
+  with an empty error (`probe command failed:`) and the run then stalled until killed.
+  A rerun with fewer tenants left passed. Likely sshd connection throttling; not proven.
+  Fix belongs in portfolio-ops: one SSH session per run.
 - **The full estate smoke hung for more than 25 minutes (2026-11-09).** Run without
   `--app`, it printed its namespace line and nothing else until it was killed. With
   `--app careercompiler` it finishes in under a minute. Not diagnosed: it is in another

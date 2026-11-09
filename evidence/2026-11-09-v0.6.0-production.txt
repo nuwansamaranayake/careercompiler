@@ -1,0 +1,30 @@
+CareerCompiler v0.6.0 production deploy, 2026-11-09 (host clock UTC)
+
+== demo-path gate, real model ==
+[1 session] ok budget=60
+[2b extract] ok stored=17 rejected=0
+[3b parse] ok parsed=5
+[4 verdict] ok verdict=apply
+[5 compile] ok bullets=17 repair_rounds=0
+[6 cover letter] ok sentences=6 repair_rounds=0
+[7 interview pack] ok bullets=17 gaps=1
+DEMO PATH OK in 90s — every step a visitor walks, walked.
+
+== estate gate ==
+run namespace: smoke-20261109T173932Z-   retention window: 7 days
+
+APP             TLS    HLTH  GUARD  TABLES   VERDICT
+careercompiler  valid  200   503    11/11    GET / -> 200 text/html 18602B PASS
+
+--- careercompiler ---
+  write : POST /fit -> verdict=do_not_apply gaps=1; compile -> doc=64 bullets=2 min_entail=0.997
+  read  : GET /fit/128 -> rows=2; planted inflation+number rejected; no-token 401x3; demo cross-tenant 403
+  rows  : candidates=49, atomic_claims=173, job_postings=56, requirements=134, fit_reports=25, match_scores=76, compiled_documents=8, rendered_bullets=74
+  retain: {'aged_namespaces': 25, 'deleted': 148, 'remaining': 31}
+  logs  : silent (no errors)
+
+ESTATE SMOKE OK: 1 apps, business loops and database truth verified
+
+== serving ==
+APP_VERSION=0.6.0 GIT_SHA=9395178, MIGRATION OK: 11 tables, image 1.83 GB, self-check PASS
+backup: careercompiler-pre-0.6.0-20261109T172121Z.sql.gz, image tag pre-0.6.0

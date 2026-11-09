@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-11-09 (deployed and rolled back the same day; production is 0.5.0, see BLOCKED.md and FAIL-0014)
+## [0.6.0] - 2026-11-09 (in production at `9395178`)
 
 The workspace: a resume and a job description in, three documents out.
 
@@ -92,13 +92,17 @@ The workspace: a resume and a job description in, three documents out.
   entire engineering organisation." prepended 0.01.
 
 ### Not done
-- **Not in production.** Deployed on the operator's word, then rolled back when the
-  estate gate failed on a production OpenRouter key that has been revoked since
-  2026-08-10 (FAIL-0014). The same key breaks 0.5.0. The release itself passed every
-  check that does not need that key, in production, before the rollback.
-- No real-model run. The browser suite's LLM is scripted, so prompt behaviour on a real
-  model is unchanged and unproven by this release; the compile, edit, and download paths
-  around it are proven.
+- Nothing owed on the release itself. Open follow-ups are in BLOCKED.md: retention has
+  no schedule, the estate smoke is fragile over SSH, `/health` does not know about the
+  model key.
+
+### Deployed
+- First attempt rolled back after 27 minutes: the production OpenRouter key had been
+  revoked since 2026-08-10 and the estate gate caught it (FAIL-0014). Second attempt,
+  with a new key: public smoke pass, demo-path gate pass on the real model in 90 seconds
+  (17 facts extracted, 0 rejected, 17 resume lines and 6 letter sentences compiled with
+  no repair rounds), estate gate exit 0, minimum entailment 0.997 on its compile.
+  `evidence/2026-11-09-v0.6.0-production.txt`.
 
 ## [0.5.0] - 2026-08-03
 
