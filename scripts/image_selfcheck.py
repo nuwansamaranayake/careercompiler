@@ -63,9 +63,19 @@ def main() -> int:
 
     guide = client.get("/guide/").text
     shots = sorted(set(re.findall(r"/assets/guide/[\w.-]+\.webp", guide)))
-    missing = [s for s in shots if client.get(s).status_code != 200]
+    got = {s: client.get(s) for s in shots}
+    missing = [s for s, r in got.items() if r.status_code != 200]
     check("guide pictures are served", len(shots) == 15 and not missing,
           f"{len(shots)} referenced, {len(missing)} missing")
+    # The slim base image ships no system MIME table, so Python guesses nothing for
+    # .webp and the first production deploy served the pictures as octet-stream.
+    types = sorted({r.headers.get("content-type", "") for r in got.values()})
+    check("guide pictures are served as image/webp", types == ["image/webp"], str(types))
+    web = Path(os.environ.get("WEB_DIR", "/srv/web"))
+    fonts = sorted(p.relative_to(web).as_posix() for p in web.rglob("*.woff2"))
+    font_types = sorted({client.get("/" + f).headers.get("content-type", "") for f in fonts[:5]})
+    check("fonts are served as font/woff2", bool(fonts) and font_types == ["font/woff2"],
+          f"{len(fonts)} shipped, types {font_types}")
 
     limits = re.search(r"<!-- LIMITS -->\s*(.+?)\s*<!-- /LIMITS -->",
                        (ROOT / "EVAL.md").read_text(encoding="utf-8"), re.S)

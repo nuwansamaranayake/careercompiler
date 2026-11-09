@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-11-09 (built and gated; not yet deployed, see BLOCKED.md)
+## [0.6.0] - 2026-11-09 (deployed and rolled back the same day; production is 0.5.0, see BLOCKED.md and FAIL-0014)
 
 The workspace: a resume and a job description in, three documents out.
 
@@ -70,6 +70,11 @@ The workspace: a resume and a job description in, three documents out.
   Docker Hub, and the stack depended on it. Nothing in the app reads or writes an
   object store, so the unused service is removed rather than repointed. CI's smoke job
   had gone red on this independently of any code change.
+- **Guide pictures were served as `application/octet-stream`.** The slim base image has
+  no system MIME table, so Python had no type for `.webp`. Browsers still rendered them
+  (checked in production), but the header was wrong. The app now declares the media
+  types it ships (`.webp`, `.woff2`), and the image self-check asserts both. Found on
+  the first production deploy of this release.
 - A cover letter compiled without a job title read "apply for the The role you pasted
   role". The title is now read from the posting's first line into a visible, editable,
   required field.
@@ -87,9 +92,13 @@ The workspace: a resume and a job description in, three documents out.
   entire engineering organisation." prepended 0.01.
 
 ### Not done
-- No real-model run and no deploy: both need the operator (BLOCKED.md). The browser
-  suite's LLM is scripted, so prompt behaviour on a real model is unchanged and unproven
-  by this release; the compile, edit, and download paths around it are proven.
+- **Not in production.** Deployed on the operator's word, then rolled back when the
+  estate gate failed on a production OpenRouter key that has been revoked since
+  2026-08-10 (FAIL-0014). The same key breaks 0.5.0. The release itself passed every
+  check that does not need that key, in production, before the rollback.
+- No real-model run. The browser suite's LLM is scripted, so prompt behaviour on a real
+  model is unchanged and unproven by this release; the compile, edit, and download paths
+  around it are proven.
 
 ## [0.5.0] - 2026-08-03
 

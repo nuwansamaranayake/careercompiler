@@ -305,3 +305,34 @@ production: the gate flickers with the draw.
 something; a listed skill without a verb becomes the weakest verb the text supports
 ("Worked with X"), never more. The demo-path gate runs on every estate invocation, so
 a recurrence blocks the release rather than reaching a visitor.
+
+## FAIL-0014 — A release was deployed onto a key that had been dead for three months
+
+**Caught by the estate gate (2026-11-09), rolled back after 27 minutes, by the rule, not by a user.**
+v0.6.0 passed CI, the 96% quality gate, a no-network self-check inside the built image,
+and a public smoke from outside. Then the estate gate failed: `POST /api/v1/fit` answered
+503.
+
+**Mechanism:** nothing in the release. The production OpenRouter key was revoked on
+2026-08-10 (`KEY_ROTATION_BLOCKED.md`, portfolio root). Probed from the host through the
+app's own embedder, the v0.5.0 image and the v0.6.0 image both got 401. Production had
+been failing every model-backed request for three months, quietly: `/health` was 200,
+the front page was 200, and no check that runs without a human looked at a model call.
+
+**Why the release work did not see it:** every pre-deploy gate was keyless by design
+(a real key is a Tier 0 spend), and the deploy checklist never asked "is the credential
+this product needs alive?" before touching the box. The audit curled the API and counted
+the tables; it did not ask the dependency.
+
+**Fix, and what is still owed:**
+1. Done: the rollback restored the known state. No data moved; no schema changed.
+2. Owed, operator: a live key on the host (BLOCKED.md, first entry).
+3. Owed, next session: a pre-deploy connectivity check that costs nothing, a
+   `GET https://openrouter.ai/api/v1/key` with the host's bearer run on the host, wired
+   into the deploy ritual before the backup step, so a dead credential stops a deploy
+   before it starts instead of after the swap.
+4. Owed, next session: `/health` says "ok" while the product cannot do its job. A
+   dependency-aware readiness signal belongs beside it.
+
+Also found by this deploy and fixed in the release: guide pictures were served as
+`application/octet-stream` because the slim base image has no MIME table (CHANGELOG 0.6.0).

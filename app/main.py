@@ -1,3 +1,4 @@
+import mimetypes
 import os
 from pathlib import Path
 
@@ -36,6 +37,11 @@ def demo():
 _WEB = Path(os.getenv("WEB_DIR", "/srv/web"))
 _MOUNTED_DIRS = ("_next", "assets")
 _HTML = "text/html; charset=utf-8"
+# What the frontend ships that a bare platform cannot name. python:3.12-slim has no system
+# MIME table, so Python guessed nothing for .webp and production served the guide's
+# pictures as application/octet-stream (first v0.6.0 deploy, 2026-11-09). The types this
+# app serves are declared by this app, not inherited from whatever the host has installed.
+_MEDIA_TYPES = {".webp": "image/webp", ".woff2": "font/woff2"}
 
 
 def mount_frontend(app: FastAPI, web: Path) -> bool:
@@ -48,6 +54,8 @@ def mount_frontend(app: FastAPI, web: Path) -> bool:
     """
     if not (web / "index.html").exists():
         return False
+    for ext, kind in _MEDIA_TYPES.items():
+        mimetypes.add_type(kind, ext)
     for name in _MOUNTED_DIRS:
         if (web / name).is_dir():
             app.mount(f"/{name}", StaticFiles(directory=web / name), name=f"web-{name}")

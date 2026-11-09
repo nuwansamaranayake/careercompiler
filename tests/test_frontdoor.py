@@ -17,6 +17,8 @@ def _site(tmp_path):
     (tmp_path / "_next" / "static" / "app.js").write_text("console.log(1)", encoding="utf-8")
     (tmp_path / "assets" / "guide").mkdir(parents=True)
     (tmp_path / "assets" / "guide" / "shot.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (tmp_path / "assets" / "guide" / "shot.webp").write_bytes(b"RIFF\x00\x00\x00\x00WEBP")
+    (tmp_path / "_next" / "static" / "font.woff2").write_bytes(b"wOF2")
     (tmp_path / "index.html").write_text("<h1>landing</h1>", encoding="utf-8")
     (tmp_path / "index.txt").write_text("rsc-root", encoding="utf-8")
     (tmp_path / "404.html").write_text("<h1>missing</h1>", encoding="utf-8")
@@ -58,6 +60,28 @@ def test_build_assets_images_and_root_files_are_served(tmp_path):
     assert c.get("/icon.svg").headers["content-type"].startswith("image/svg+xml")
     assert c.get("/workspace/index.txt").text == "rsc-workspace"
     assert c.get("/index.txt").text == "rsc-root"
+
+
+def test_webp_and_woff2_are_typed_even_where_the_platform_has_no_mime_table(
+        tmp_path, monkeypatch):
+    """python:3.12-slim has no /etc/mime.types, so `mimetypes` knew nothing about .webp
+    and production served the guide's pictures as application/octet-stream (found on
+    the first v0.6.0 deploy, 2026-11-09). Simulated here by a platform that guesses
+    nothing: the frontend's own registrations must still answer."""
+    import mimetypes
+    bare = mimetypes.MimeTypes(filenames=())
+    for table in bare.types_map:
+        table.pop(".webp", None)
+        table.pop(".woff2", None)
+    assert bare.guess_type("x.webp")[0] is None
+    monkeypatch.setattr(mimetypes, "_db", bare)
+    monkeypatch.setattr(mimetypes, "inited", True)
+
+    c = _client(_site(tmp_path))
+
+    assert c.get("/assets/guide/shot.webp").headers["content-type"] == "image/webp"
+    assert c.get("/_next/static/font.woff2").headers["content-type"] == "font/woff2"
+    assert c.get("/assets/guide/shot.png").headers["content-type"] == "image/png"
 
 
 def test_unbuilt_pages_and_traversal_are_404(tmp_path):

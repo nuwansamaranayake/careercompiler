@@ -1,33 +1,52 @@
 # BLOCKED / deferred — needs a decision or scheduled work, with what unblocks it
 
-- **v0.6.0 is built and gated but NOT deployed (2026-11-09).** Tier 2: the app stores
-  uploaded resumes (personal data) and shares beacon-gom with a paying product, so the
-  deploy needs the operator's word. Merged to `main` by fast-forward; CI green on all
-  six jobs (run 42600081391 on `bc3c1c3`: lint, tests on 3.12 and 3.13, eval, the stack
-  smoke with image size and self-check, and the quality gate). Quality gate 99.75%
-  locally and on the CI runner (`evidence/2026-11-09-quality-gate.md`). Nothing in this release changes the schema:
-  `EXPECTED_TABLE_COUNT` and the estate smoke entry stay as they are.
-  Unblocked by the operator saying "deploy CareerCompiler v0.6.0". The ritual, unchanged:
-  1. Done 2026-11-09: `main` carries the release. Confirm CI is green on the SHA you deploy.
-  2. Snapshot: on beacon-gom, tag the running image
-     (`docker tag careercompiler-service:latest careercompiler-service:pre-0.6.0`) and
-     `pg_dump` the careercompiler database.
-  3. `ssh beacon-gom`, in the CareerCompiler checkout: `git pull --ff-only`, then
-     `docker compose -f compose.prod.yml build service && docker compose -f compose.prod.yml up -d`
-     (this is what `portfolio-ops/deploy/vps_redeploy.sh` does).
-  4. From the workstation: `python portfolio-ops/scripts/estate_smoke.py --ssh beacon-gom`
-     must exit 0, demo-path gate included. Then load `/workspace/`, `/guide/`, `/demo/`.
-  5. Rollback if any of that fails: retag `pre-0.6.0` as `latest` and `up -d`.
-  6. Tag `v0.6.0` on the CI-green SHA.
-- **No real-model run was made for v0.6.0 (2026-11-09).** Spending against the paid
-  OpenRouter key is a Tier 0 action, so the browser suite uses a scripted LLM. Proven
-  without a key: every route, both gates on the real entailment model, the solver, the
-  documents, the whole interface. NOT proven by this run: that a real model's extraction
-  and phrasing still behave as they did at v0.5.0. No prompt and no model call changed in
-  this release, so the risk is low, and the production demo-path gate in step 4 above is
-  the check that would catch it. Unblocked by the operator authorising one local run
-  against the real key by name: `docker compose up -d --build` then
-  `python scripts/demo_path_smoke.py --base http://localhost:8000`.
+- **PRODUCTION HAS NO WORKING OPENROUTER KEY, and has not since 2026-08-10. This blocks
+  the v0.6.0 deploy and breaks v0.5.0 today.** The shared key (fingerprint `7E1A03D4`)
+  was revoked on 2026-08-10; `KEY_ROTATION_BLOCKED.md` at the portfolio root lists
+  CareerCompiler among seven apps down on it. Measured 2026-11-09 from the production
+  host, through the app's own embedder, in BOTH the v0.5.0 and the v0.6.0 image:
+  `embeddings endpoint answered 401`. Effect on the live site, either version: a seeded
+  sample verdict loads, and everything that calls a model fails (fact extraction, posting
+  parse, fit with real embeddings, compile, cover letter, interview pack).
+  **Unblocked by the operator only:** issue a new OpenRouter key for CareerCompiler
+  (with a spend cap) and get it into `/opt/aignite-portfolio/careercompiler/.env` on
+  beacon-gom as `OPENROUTER_API_KEY`. Never paste it into a chat: that is how the last
+  one leaked. Then say "deploy CareerCompiler v0.6.0" again.
+- **v0.6.0 was deployed and rolled back on 2026-11-09. Production is v0.5.0 (`3f954ba`).**
+  The operator said "Deploy v0.6.0". What happened, in order:
+  1. Backup at `20261109T160407Z`: running image tagged `careercompiler-service:pre-0.6.0`;
+     `pg_dump` at `/opt/aignite-portfolio/backups/careercompiler-pre-0.6.0-20261109T160407Z.sql.gz`
+     (11 tables, ends cleanly); `compose.prod.yml` and `.env` copied beside it.
+  2. Built `59215a4` on the host in 3 minutes: 1.83 GB, self-check 12 of 12 with no network.
+  3. Swapped. Healthy in 9 seconds, `MIGRATION OK: 11 tables`, Beacon GoM untouched.
+  4. Public smoke from outside passed: `/`, `/workspace/`, `/demo/`, `/guide/` 200 with real
+     content, version 0.6.0, three no-token calls 401, TLS verify 0, 15 of 15 guide
+     pictures rendering in a real browser.
+  5. **Estate gate failed**: `POST /api/v1/fit expected 201, got 503`. Cause: the dead key
+     above, not the release.
+  6. Rolled back per the rule: `pre-0.6.0` retagged `latest`, `up -d`, healthy in 12
+     seconds, version 0.5.0 confirmed from outside. Total time on v0.6.0: about 27 minutes (16:08Z to 16:35Z).
+  The same gate fails on v0.5.0 for the same reason, so no version can be released
+  through it until the key exists. v0.5.0 was left in place as the known state rather
+  than shipping a release whose gate did not pass.
+  **To redeploy once the key is in place** (about 5 minutes; the backup above still stands,
+  and no schema changed):
+  `ssh beacon-gom`, `cd /opt/aignite-portfolio/careercompiler`, `git fetch origin main`,
+  `git checkout --detach origin/main`,
+  `docker compose -f compose.prod.yml build --build-arg APP_VERSION=0.6.0 --build-arg GIT_SHA=<sha> --build-arg BUILD_TIME=<utc> service`,
+  `docker run --rm --network none --entrypoint python careercompiler-service:latest scripts/image_selfcheck.py`,
+  `docker compose -f compose.prod.yml up -d --no-build service`. Then from the workstation
+  `python portfolio-ops/scripts/estate_smoke.py --ssh beacon-gom --app careercompiler`
+  must exit 0. Roll back with `docker tag careercompiler-service:pre-0.6.0 careercompiler-service:latest`
+  and `up -d --no-build service`. Tag `v0.6.0` only after the gate passes.
+  Left on the host: image tag `careercompiler-service:v0.6.0-failed-smoke` (the `59215a4`
+  build; sound, but it predates the media-type fix, so rebuild rather than reuse it).
+- **The full estate smoke hung for more than 25 minutes (2026-11-09).** Run without
+  `--app`, it printed its namespace line and nothing else until it was killed. With
+  `--app careercompiler` it finishes in under a minute. Not diagnosed: it is in another
+  app's loop, most likely one waiting on the same revoked key, and those apps were out of
+  scope. Its output is block-buffered, so run it with `python -u` to see where it stops.
+  The alert it tried to send on failure also failed: `RESEND_API_KEY is not set`.
 - **Image size margin — RESOLVED 2026-11-09.** A rebuild had drifted to 1.93 GB, over
   the 1.9 GB assertion, almost all of it dependency and base-image drift. `git` now
   lives and dies in one build layer: 1.84 GB, 60 MB under the assertion. Verified by a
