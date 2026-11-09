@@ -1,9 +1,12 @@
 """Browser e2e: the built frontend against scripts/e2e_server.py, in real Chromium.
 
 Opt-in with CC_E2E=1, because it needs things a plain `pytest` does not have: the built
-frontend (web/out), the pinned entailment weights on disk (HF_HOME), and a browser.
-scripts/quality_gate.py sets the flag and treats a skip as a failure, so the gate can
-never pass on a suite that did not run.
+frontend (web/out), the pinned entailment weights on disk (HF_HOME), Playwright, and a
+browser. Without the flag the test modules are not collected at all, so they are never
+imported: a plain `pytest` must pass on a machine that has no Playwright (the CI test
+job failed on exactly that import, 2026-11-09). scripts/quality_gate.py sets the flag
+and fails unless at least one browser test ran and none skipped, so the gate can never
+pass on a suite that did not run.
 """
 from __future__ import annotations
 
@@ -21,13 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 ENABLED = os.environ.get("CC_E2E") == "1"
 
 
-def pytest_collection_modifyitems(config, items):
-    if ENABLED:
-        return
-    skip = pytest.mark.skip(reason="browser e2e is opt-in: CC_E2E=1 (see tests/e2e/conftest.py)")
-    for item in items:
-        if "e2e" in Path(str(item.fspath)).parts:
-            item.add_marker(skip)
+collect_ignore_glob = [] if ENABLED else ["test_*.py"]
 
 
 def _free_port() -> int:

@@ -66,6 +66,10 @@ The workspace: a resume and a job description in, three documents out.
   `scripts/image_selfcheck.py` runs inside the image with no network and proves git is
   gone, torch is the CPU build, the pinned model loads and gates, every page and guide
   picture is served, and the limits sentence is on the landing page. CI runs it.
+- **`docker compose up` could no longer start**: the `minio/minio` image is gone from
+  Docker Hub, and the stack depended on it. Nothing in the app reads or writes an
+  object store, so the unused service is removed rather than repointed. CI's smoke job
+  had gone red on this independently of any code change.
 - A cover letter compiled without a job title read "apply for the The role you pasted
   role". The title is now read from the posting's first line into a visible, editable,
   required field.
