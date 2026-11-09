@@ -1,6 +1,6 @@
 # Quality gate
 
-Run 2026-11-09 10:03 UTC at commit `b98102e` plus uncommitted changes.
+Run 2026-11-09 10:13 UTC at commit `6abe30e`.
 
 **Quality score: 99.75%** (floor 96%). **Verdict: PASS.**
 
@@ -12,12 +12,12 @@ Run 2026-11-09 10:03 UTC at commit `b98102e` plus uncommitted changes.
 | Check | Result | Detail | Time |
 |---|---|---|---|
 | backend lint (ruff) | pass | exit 0 | 3s |
-| backend tests (pytest) | pass | 253 passed, 0 failed | 123s |
-| frontend types (tsc --strict) | pass | exit 0 | 4s |
-| frontend lint (eslint) | pass | exit 0 | 9s |
-| frontend tests (vitest) | pass | lowest of lines, statements, functions, branches | 4s |
-| frontend build (next export) | pass | 4 of 4 pages exported | 39s |
-| browser e2e (Chromium, real gates) | pass | 12 passed, 0 failed, 0 skipped | 91s |
+| backend tests (pytest) | pass | 253 passed, 0 failed | 121s |
+| frontend types (tsc --strict) | pass | exit 0 | 3s |
+| frontend lint (eslint) | pass | exit 0 | 5s |
+| frontend tests (vitest) | pass | lowest of lines, statements, functions, branches | 2s |
+| frontend build (next export) | pass | 4 of 4 pages exported | 26s |
+| browser e2e (Chromium, real gates) | pass | 12 passed, 0 failed, 0 skipped | 118s |
 
 The score is the lowest coverage, not an average. Every check must pass and a check that did not run counts as a failure. Logs: `data/local/gate/`.
 
