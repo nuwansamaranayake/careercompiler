@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-09 (built and gated; not yet deployed, see BLOCKED.md)
+
+The workspace: a resume and a job description in, three documents out.
+
+### Added
+- **The workspace (`/workspace/`).** Two inputs only: a resume (PDF, docx, or pasted
+  text) and a job description. One button runs six visible steps to a fit verdict. Then
+  four tabs: career match, resume, cover letter, interview prep. `/demo/` is the same
+  screens on the seeded synthetic candidate. The frontend's logic lives in `web/lib/`.
+- **Gated line edits** (`PUT /api/v1/compile/{did}/bullets/{position}`). An edited
+  sentence keeps its cites and must pass the linker and the entailment gate. A pass
+  replaces the stored line and score, so the PDF and docx carry it. A fail is a 422 with
+  the same evidence as the live check, and nothing changes. One sentence is bounded at
+  600 characters, for the edit and the live check alike.
+- **The name on the documents.** The workspace asks for no name, so
+  `name_from_resume` reads it from the resume's first line when that line is plainly a
+  name (section headings and job titles are refused, particles and initials accepted).
+  Otherwise the placeholder is an obvious placeholder. `PATCH /api/v1/candidates/{cid}`
+  corrects it, and the next download is signed with the new name without a recompile.
+- **Resume length** as a choice in the UI (14 or 28 budget lines) over the existing
+  `budget_lines` parameter.
+- **Fit rows carry `requirement`**, the requirement in the posting's own words, beside
+  the machine `req_key`.
+- **The visual guide** at `/guide/` and `docs/guide/CareerCompiler-Visual-Guide.pdf`:
+  fifteen screenshots captured from the real interface on synthetic data
+  (`scripts/capture_guide.py`), labelled as such.
+- **The quality gate** (`scripts/quality_gate.py`, `make quality`). Score = the lowest
+  of backend coverage (`app/`, line and branch) and frontend coverage (`web/lib/`),
+  floor 96. Ruff, pytest, tsc, eslint, vitest, the production build, and the browser
+  suite must all run and pass; a check that did not run is a failure.
+- **The browser suite** (`tests/e2e/`, 12 tests, real Chromium) against
+  `scripts/e2e_server.py`: the real app, matcher, solver, linker, entailment model, PDF
+  and docx writers. Three named doubles only: sqlite, FakeRedis, and a scripted LLM that
+  copies sentences and never composes one.
+- `mount_frontend`: the static export is served file by file from a startup listing, so
+  a new page needs no route and no request path reaches the filesystem.
+
+### Fixed
+- **Provenance was rewritten on load.** `_load_claims` rebuilt every stored claim
+  through the data-entry constructor, which stamps `self_attested`. A fact extracted
+  from a resume was labelled self-attested in the API, the PDF appendix, and the docx
+  appendix. Stored provenance and span are now restored. Found by the browser suite.
+- **A pasted or uploaded resume was signed "My resume" / "My upload"** in the cover
+  letter. See the name rule above.
+- **Scores were rounded up.** 0.9951 printed as `entailment 1.00` in the PDF and docx
+  appendix, and 0.6996 against 0.70 printed "supports this at 0.70, below the 0.70".
+  Scores are truncated, never rounded up, in documents, error text, and the UI.
+- **The entailment gate scored only the first 512 tokens.** Truncation dropped the tail
+  of the sentence, so text appended past the window passed unread. A pair that does not
+  fit the window now scores 0.0, and sentence length is bounded at the door. Found by
+  independent review before merge; no stored document was affected, because only the new
+  edit endpoint could have persisted such a sentence.
+- **The image had drifted over its size assertion.** A rebuild measured 1.93 GB against
+  the 1.9 GB assertion: about 33 MB of dependency and base-image drift since August and
+  under 4 MB from this release. `git` is now installed, used, and removed in one layer
+  (it only resolves groundwork at build time). Rebuilt image: 1.84 GB.
+  `scripts/image_selfcheck.py` runs inside the image with no network and proves git is
+  gone, torch is the CPU build, the pinned model loads and gates, every page and guide
+  picture is served, and the limits sentence is on the landing page. CI runs it.
+- A cover letter compiled without a job title read "apply for the The role you pasted
+  role". The title is now read from the posting's first line into a visible, editable,
+  required field.
+
+### Measured
+- Quality gate, 2026-11-09: score 99.75% (backend 99.75%, frontend 100%), 253 backend
+  tests, 69 frontend tests, 12 browser tests, all passing. `evidence/2026-11-09-quality-gate.md`.
+- Backend coverage 82% to 99.75% (line and branch). One line and three branches remain
+  uncovered, each listed by the gate report and none reachable: `selector.py` raises on
+  a solver status that an always-feasible model cannot return; the render loop in
+  `routes.py` always leaves by `break` on its last round; two `Protocol` stubs in
+  `facts.py` and `jd.py` have bodies that never execute. No `pragma: no cover` was used.
+- On the pinned entailment model with the synthetic sample: faithful resume lines 0.99,
+  first-person letter sentences 0.78 to 0.97, and a faithful line with "Directed the
+  entire engineering organisation." prepended 0.01.
+
+### Not done
+- No real-model run and no deploy: both need the operator (BLOCKED.md). The browser
+  suite's LLM is scripted, so prompt behaviour on a real model is unchanged and unproven
+  by this release; the compile, edit, and download paths around it are proven.
+
 ## [0.5.0] - 2026-08-03
 
 ### Added

@@ -40,6 +40,8 @@ export type FitSummary = {
 
 export type FitRow = {
   req_key: string;
+  /* The requirement in the posting's own words; null if it was removed since. */
+  requirement: string | null;
   must_have: boolean;
   status: string;
   direct: boolean;

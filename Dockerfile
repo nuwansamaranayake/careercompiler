@@ -13,10 +13,6 @@ FROM python:3.12-slim
 WORKDIR /srv
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 
-# git is required: aignite-groundwork resolves from a git+https URL (see pyproject.toml)
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
-
 # NOTE: aignite-groundwork is a sibling editable dependency in local dev
 # (pip install -e ../groundwork). In CI / image builds it resolves from the
 # published wheel or a git ref; see .github/workflows/ci.yml.
@@ -50,7 +46,16 @@ import torch; assert torch.version.cuda is None, 'CUDA torch leaked into the ima
 print('torch', torch.__version__)"
 
 COPY . .
-RUN pip install .
+# git has exactly one job in this image: resolving aignite-groundwork from its git+https
+# URL (pyproject.toml). It is installed, used, and removed in ONE layer, because a layer
+# that only adds git keeps its 100 MB forever even if a later layer deletes it. Measured
+# 2026-11-09: three months of dependency and base-image drift had carried a rebuild to
+# 1.93 GB against the 1.9 GB assertion (DECISIONS.md 003); this reclaims that layer.
+# Nothing at runtime calls git.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+ && pip install . \
+ && apt-get purge -y --auto-remove git \
+ && rm -rf /var/lib/apt/lists/*
 COPY --from=webbuild /webbuild/out /srv/web
 ENV WEB_DIR=/srv/web
 

@@ -242,7 +242,7 @@ textarea:focus, input[type="text"]:focus { outline: 2px solid var(--focus); outl
 
 .specimen { position: relative; transform: rotate(1.2deg); }
 .specimen .sheet { padding: 1.6rem 1.5rem 1.4rem; }
-.specimen .stamp { position: absolute; right: -0.6rem; top: -1.1rem; animation-delay: 0.5s; }
+.specimen .stamp { position: absolute; right: -0.6rem; top: -1.1rem; animation-delay: 0.5s; z-index: 2; background: var(--desk); }
 .measure { display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem 0.8rem; align-items: center; font: 400 0.8rem/1.3 var(--mono); margin-top: 0.4rem; }
 .measure .bar { height: 0.5rem; background: var(--sheet-rule); border-radius: 1px; position: relative; overflow: hidden; }
 .measure .bar i { position: absolute; inset: 0 auto 0 0; background: currentColor; }
@@ -344,7 +344,7 @@ table.fit { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 table.fit th { text-align: left; font: 500 0.68rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); padding: 0 0.8rem 0.7rem 0; border-bottom: 1px solid var(--rule-2); }
 table.fit td { padding: 0.85rem 0.8rem 0.85rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
 table.fit tr:last-child td { border-bottom: 0; }
-table.fit .req { font-weight: 600; text-transform: capitalize; }
+table.fit .req { font-weight: 600; }
 table.fit .must { font: 500 0.62rem/1 var(--mono); letter-spacing: 0.08em; color: var(--red); text-transform: uppercase; display: block; margin-top: 0.3rem; }
 
 .bench { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(17rem, 1fr); gap: 1.6rem; align-items: start; }
@@ -376,6 +376,11 @@ table.fit .must { font: 500 0.62rem/1 var(--mono); letter-spacing: 0.08em; color
 .shot figcaption { font: 400 0.72rem/1.4 var(--mono); color: var(--ink-3); margin-top: 0.55rem; }
 
 /* ------------------------------------------------------------ responsive */
+@media (max-width: 520px) {
+  .masthead { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+  .nav { margin-left: -0.7rem; }
+}
+
 @media (max-width: 900px) {
   .hero, .intake, .bench, .grid2, .step { grid-template-columns: minmax(0, 1fr); }
   .grid3 { grid-template-columns: minmax(0, 1fr); }

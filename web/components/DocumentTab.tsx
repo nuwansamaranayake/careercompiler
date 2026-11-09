@@ -20,6 +20,9 @@ export type Ctx = {
   guard: (e: unknown) => string;
 };
 
+/* The server's bound on one sentence (routes.MAX_SENTENCE_CHARS). */
+const MAX_SENTENCE_CHARS = 600;
+
 const BUDGETS = [
   { lines: 14, label: "Half page" },
   { lines: 28, label: "One page" },
@@ -43,6 +46,7 @@ export function DocumentTab({ kind, ctx, onCompiled }: {
   const [budget, setBudget] = useState(28);
   const [secs, setSecs] = useState(0);
   const [dlError, setDlError] = useState("");
+  const [evidenceError, setEvidenceError] = useState("");
   const started = useRef(0);
 
   useEffect(() => {
@@ -50,6 +54,13 @@ export function DocumentTab({ kind, ctx, onCompiled }: {
     const iv = setInterval(() => setSecs(Math.round((Date.now() - started.current) / 1000)), 500);
     return () => clearInterval(iv);
   }, [status]);
+
+  const loadEvidence = async (documentId: number) => {
+    setEvidenceError("");
+    try {
+      setLines((await api.getDocument(ctx.token, documentId)).bullets);
+    } catch (e) { setEvidenceError(ctx.guard(e)); }
+  };
 
   const compile = async () => {
     setStatus("running"); setSecs(0); setRefusal(null); setFailText(""); setSelected(null);
@@ -59,9 +70,14 @@ export function DocumentTab({ kind, ctx, onCompiled }: {
       const next: Doc = kind === "resume"
         ? { kind, data: await api.compileResume(ctx.token, ctx.candidateId, ctx.jobId, budget) }
         : { kind, data: await api.compileLetter(ctx.token, ctx.candidateId, ctx.jobId) };
-      const prov = await api.getDocument(ctx.token, next.data.document_id);
-      setDoc(next); setLines(prov.bullets); setStatus("done");
+      // The compile is done and paid for the moment it returns: keep it. The evidence
+      // is a second request, and its failure must not throw the document away.
+      const compiled = next.kind === "resume" ? next.data.bullets : next.data.sentences;
+      setDoc(next);
+      setLines(compiled.map((l) => ({ ...l, document_id: next.data.document_id, facts: [] })));
+      setStatus("done");
       onCompiled?.(next.data.document_id);
+      await loadEvidence(next.data.document_id);
     } catch (e) {
       const detail = e instanceof api.ApiError ? e.detail : undefined;
       const r = refusalFrom(detail);
@@ -182,6 +198,15 @@ export function DocumentTab({ kind, ctx, onCompiled }: {
           {dlError && <p className="err small" role="alert">{dlError}</p>}
         </div>
 
+        {evidenceError && (
+          <div className="note bad stack" role="alert" data-testid="evidence-error">
+            <p style={{ margin: 0 }}>
+              The {what} compiled, but the evidence behind its lines did not load: {evidenceError}
+            </p>
+            <p><button type="button" className="quiet" data-testid="evidence-retry"
+              onClick={() => loadEvidence(doc.data.document_id)}>Load the evidence again</button></p>
+          </div>
+        )}
         {current ? (
           <LineEditor key={current.position} line={current} ctx={ctx} threshold={gate.threshold}
             onSaved={(text, entailment) => {
@@ -245,11 +270,21 @@ function LineEditor({ line, ctx, threshold, onSaved }: {
   const [saved, setSaved] = useState(false);
   const [message, setMessage] = useState("");
   const changed = text.trim() !== line.text.trim() && text.trim().length > 0;
+  /* What the textarea holds right now. A verdict is shown only for the text it was
+     asked about: typing while a check is in flight must not leave the old answer
+     standing under new words. */
+  const live = useRef(line.text);
+
+  const edit = (next: string) => {
+    live.current = next;
+    setText(next); setSaved(false); setVerdict(null); setMessage("");
+  };
 
   const check = async (candidate: string) => {
     setBusy("check"); setMessage(""); setVerdict(null); setSaved(false);
     try {
-      setVerdict(await api.checkLine(ctx.token, line.document_id, candidate, line.cites));
+      const v = await api.checkLine(ctx.token, line.document_id, candidate, line.cites);
+      if (live.current === candidate) setVerdict(v);
     } catch (e) { setMessage(ctx.guard(e)); }
     finally { setBusy(""); }
   };
@@ -259,6 +294,7 @@ function LineEditor({ line, ctx, threshold, onSaved }: {
     try {
       const r = await api.saveLine(ctx.token, line.document_id, line.position, text.trim());
       onSaved(r.text, r.entailment);
+      live.current = r.text;
       setText(r.text);
       setSaved(true);
     } catch (e) {
@@ -282,8 +318,8 @@ function LineEditor({ line, ctx, threshold, onSaved }: {
       <div>
         <label className="field" htmlFor={`edit-${line.position}`}>Edit the wording</label>
         <textarea id={`edit-${line.position}`} data-testid="edit-text" rows={4} value={text}
-          style={{ minHeight: "6rem" }}
-          onChange={(e) => { setText(e.target.value); setSaved(false); }} />
+          style={{ minHeight: "6rem" }} maxLength={MAX_SENTENCE_CHARS}
+          onChange={(e) => edit(e.target.value)} />
       </div>
       <div className="row">
         <button type="button" data-testid="save-edit" disabled={!changed || busy !== ""} onClick={save}>
@@ -298,7 +334,7 @@ function LineEditor({ line, ctx, threshold, onSaved }: {
         An edit is saved only if both gates pass at {threshold}. The facts a line cites
         cannot be changed here.{" "}
         <button type="button" className="link" data-testid="overstate" disabled={busy !== ""}
-          onClick={() => { const t = overstate(line.text); setText(t); check(t); }}>
+          onClick={() => { const t = overstate(line.text); edit(t); check(t); }}>
           Overstate it for me
         </button>{" "}
         to watch a rejection.

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api";
 import {
-  DEFAULT_JOB_TITLE, MAX_UPLOAD_BYTES, MIN_JOB_CHARS, MIN_RESUME_CHARS, PipelineStop, STEPS,
-  runIntake, validateIntake, validateJob, validateResume,
+  MAX_TITLE_CHARS, MAX_UPLOAD_BYTES, MIN_JOB_CHARS, MIN_RESUME_CHARS, PipelineStop, STEPS,
+  runIntake, titleFromPosting, validateIntake, validateJob, validateResume, validateTitle,
   type PipelineDeps,
 } from "./pipeline";
 import { stamp } from "./session";
@@ -39,7 +39,7 @@ function deps(over: Partial<PipelineDeps["api"]> = {}, session = null as Pipelin
       disqualifying_gaps: [] })),
     ...over,
   };
-  return { api, now: () => T0, session } satisfies PipelineDeps;
+  return { api, now: () => T0, session, onSession: vi.fn() } satisfies PipelineDeps;
 }
 
 const TEXT_INPUT: IntakeInput = {
@@ -68,10 +68,34 @@ describe("validation", () => {
     expect(validateJob("   ")).toMatch(String(MIN_JOB_CHARS));
     expect(validateJob("y".repeat(MIN_JOB_CHARS))).toBeUndefined();
   });
-  it("collects both errors, or none", () => {
-    expect(validateIntake({ resume: null, jobTitle: "", jobText: "" }))
-      .toEqual({ resume: expect.any(String), job: expect.any(String) });
+  it("needs a job title of sane length", () => {
+    expect(validateTitle("   ")).toMatch(/Add the job title/);
+    expect(validateTitle("x".repeat(MAX_TITLE_CHARS + 1))).toMatch(String(MAX_TITLE_CHARS));
+    expect(validateTitle(" Platform Engineer ")).toBeUndefined();
+  });
+  it("collects every error, or none", () => {
+    expect(validateIntake({ resume: null, jobTitle: "", jobText: "" })).toEqual({
+      resume: expect.any(String), job: expect.any(String), title: expect.any(String) });
     expect(validateIntake(TEXT_INPUT)).toEqual({});
+  });
+});
+
+describe("titleFromPosting", () => {
+  it("takes a short first line as the title", () => {
+    expect(titleFromPosting("Platform Engineer\n\nAbout the role\n")).toBe("Platform Engineer");
+    expect(titleFromPosting("\r\n  Senior Site Reliability Lead, Defense Systems \r\nWe are"))
+      .toBe("Senior Site Reliability Lead, Defense Systems");
+  });
+  it("refuses a first line that is a sentence, a heading, or too long", () => {
+    expect(titleFromPosting("We are a friendly company that values curiosity.\nMore")).toBe("");
+    expect(titleFromPosting("About the role:\nYou will")).toBe("");
+    expect(titleFromPosting("Join us and help build the platform our product teams deploy on every day\n"))
+      .toBe("");
+    expect(titleFromPosting("x".repeat(MAX_TITLE_CHARS + 1))).toBe("");
+  });
+  it("is empty for empty text", () => {
+    expect(titleFromPosting("")).toBe("");
+    expect(titleFromPosting("  \n \n")).toBe("");
   });
 });
 
@@ -113,7 +137,7 @@ describe("runIntake", () => {
     const f = file("cv.pdf", 9000);
     const events: StepEvent[] = [];
     const result = await runIntake(
-      d, { resume: { kind: "file", file: f }, jobTitle: "", jobText: JOB_TEXT },
+      d, { resume: { kind: "file", file: f }, jobTitle: "Site Reliability Lead", jobText: JOB_TEXT },
       (e) => events.push(e));
 
     expect(d.api.uploadResume).toHaveBeenCalledWith("tok", f);
@@ -123,9 +147,9 @@ describe("runIntake", () => {
     expect(events.find((e) => e.id === "facts" && e.state === "done")?.note).toBe("1 fact");
     expect(result.candidateId).toBe(41);
     expect(result).toMatchObject({ name: "Your Name", nameSource: "placeholder" });
-    expect(result.jobTitle).toBe(DEFAULT_JOB_TITLE);
+    expect(result.jobTitle).toBe("Site Reliability Lead");
     expect(result.facts).toEqual({ usable: 1, rejected: 0, rejects: [] });
-    expect(d.api.createJob).toHaveBeenCalledWith("tok", DEFAULT_JOB_TITLE, JOB_TEXT);
+    expect(d.api.createJob).toHaveBeenCalledWith("tok", "Site Reliability Lead", JOB_TEXT);
   });
 
   it("reuses a live session instead of opening another", async () => {
@@ -144,6 +168,13 @@ describe("runIntake", () => {
     expect(d.api.openSession).not.toHaveBeenCalled();
   });
 
+  it("stops before any request when there is no job title", async () => {
+    const d = deps();
+    await expect(runIntake(d, { ...TEXT_INPUT, jobTitle: "  " }, () => {}))
+      .rejects.toMatchObject({ name: "PipelineStop", step: "job" });
+    expect(d.api.openSession).not.toHaveBeenCalled();
+  });
+
   it("stops when every extracted fact failed to anchor", async () => {
     const d = deps({
       extractFacts: vi.fn(async () => ({ stored: 3, rejected_span_anchor: 3 })),
@@ -156,6 +187,16 @@ describe("runIntake", () => {
     expect(d.api.createJob).not.toHaveBeenCalled();
     expect(events.at(-1)).toEqual({
       id: "facts", state: "done", note: "0 facts, 3 rejected on anchoring" });
+  });
+
+  it("hands the session over as soon as it exists, even when the run then stops", async () => {
+    const d = deps({ extractFacts: vi.fn(async () => ({ stored: 0, rejected_span_anchor: 0 })) });
+    await expect(runIntake(d, TEXT_INPUT, () => {})).rejects.toBeInstanceOf(PipelineStop);
+    expect(d.onSession).toHaveBeenCalledTimes(1);
+    expect(d.onSession).toHaveBeenCalledWith(stamp(WIRE, T0));
+    // ...and before the first request that carries the token.
+    expect(d.onSession.mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(d.api.createCandidate).mock.invocationCallOrder[0]);
   });
 
   it("stops when the posting yields no requirements", async () => {

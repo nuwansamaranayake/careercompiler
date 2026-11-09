@@ -192,9 +192,25 @@ class RenameIn(BaseModel):
 
 PLACEHOLDER_NAME = "Your Name"
 _NAME_TOKEN = re.compile(r"^[^\W\d_][^\W\d_'.\-]*(?:['\-][^\W\d_]+)*\.?$")
-_NOT_NAMES = {"curriculum vitae", "resume", "résumé", "cv", "professional summary",
-              "summary", "profile", "personal profile", "work experience", "experience",
-              "contact information", "career objective", "objective"}
+_INITIALS = re.compile(r"^(?:[^\W\d_]\.){1,4}$")
+# Lowercase particles that sit inside real names: "Vincent van Gogh", "Maria de la Cruz".
+_PARTICLES = {"van", "von", "de", "del", "della", "der", "den", "di", "da", "das", "dos",
+              "du", "la", "le", "el", "al", "bin", "ibn", "ter", "ten", "st."}
+# Words that open resumes without being anyone's name: section headings and job titles.
+# One of these anywhere in the line means the line is not trusted as a name.
+_NOT_NAME_WORDS = {
+    "curriculum", "vitae", "resume", "résumé", "cv", "summary", "profile", "objective",
+    "experience", "education", "skills", "contact", "information", "career", "work",
+    "professional", "personal", "technical", "executive", "employment", "history",
+    "qualifications", "about", "portfolio", "references", "certifications",
+    "senior", "junior", "lead", "principal", "staff", "chief", "head", "associate",
+    "assistant", "intern", "engineer", "developer", "manager", "director", "officer",
+    "analyst", "scientist", "architect", "consultant", "designer", "specialist",
+    "administrator", "coordinator", "executive", "president", "founder", "student",
+    "software", "data", "product", "project", "program", "platform", "systems", "sales",
+    "marketing", "operations", "finance", "business", "research", "nurse", "teacher",
+    "accountant", "technician", "supervisor", "representative", "advisor", "strategist",
+}
 
 
 def name_from_resume(text: str) -> str | None:
@@ -205,11 +221,20 @@ def name_from_resume(text: str) -> str | None:
     words with no digits, no punctuation beyond . ' -, and nothing after a comma or a
     bar (credentials, a headline). Anything else is not guessed at."""
     first = next((ln.strip() for ln in text.replace("\r", "").split("\n") if ln.strip()), "")
+    first = first.replace("\u2019", "'")          # Word's typographic apostrophe: O’Brien
     first = re.split(r"\s*[,|•·]\s*|\s+[\u2013\u2014-]\s+", first)[0]
     tokens = first.split()
-    if not 2 <= len(tokens) <= 4 or len(first) > 60 or first.lower() in _NOT_NAMES:
+    if not 2 <= len(tokens) <= 5 or len(first) > 60:
         return None
-    if not all(_NAME_TOKEN.match(tok) and tok[0].isupper() for tok in tokens):
+    if any(tok.lower().strip(".") in _NOT_NAME_WORDS for tok in tokens):
+        return None
+
+    def namelike(i: int, tok: str) -> bool:
+        if i > 0 and tok.lower() in _PARTICLES:
+            return True
+        return bool(_INITIALS.match(tok)) or bool(_NAME_TOKEN.match(tok) and tok[0].isupper())
+
+    if not all(namelike(i, tok) for i, tok in enumerate(tokens)):
         return None
     if first.isupper():
         tokens = [tok.capitalize() for tok in tokens]
@@ -402,7 +427,13 @@ def get_fit(rid: int, authorization: str | None = Header(default=None)):
         _guard(s, scope, candidate_id=rep["candidate_id"])
         rows = s.execute(sa.select(db.match_scores)
                          .where(db.match_scores.c.fit_report_id == rid)).mappings().all()
-    return {"report": dict(rep), "rows": [dict(r) for r in rows]}
+        # The posting's own wording for each requirement. req_key is a label the model
+        # coined; the reader of a fit report needs what the employer actually wrote.
+        text_of = {r.req_key: r.text for r in s.execute(
+            sa.select(db.requirements.c.req_key, db.requirements.c.text)
+            .where(db.requirements.c.job_id == rep["job_id"])).all()}
+    return {"report": dict(rep),
+            "rows": [{**dict(r), "requirement": text_of.get(r["req_key"])} for r in rows]}
 
 
 # --------------------------------------------------------------------------- Phase 2
@@ -417,9 +448,14 @@ class CompileIn(BaseModel):
     embedder: str = Field(default="auto", pattern="^(auto|hashing|openrouter)$")
 
 
+# One rendered sentence. Generous for a resume line, and far inside what the entailment
+# model reads whole, so an edit cannot hide text past the model's window.
+MAX_SENTENCE_CHARS = 600
+
+
 class CheckIn(BaseModel):
     document_id: int
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=MAX_SENTENCE_CHARS)
     cites: list[str] = Field(default_factory=list)
 
 
@@ -864,7 +900,7 @@ def _gate_sentence(bullet: Bullet, claims: list[AtomicClaim]) -> dict:
 
 
 class EditIn(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=MAX_SENTENCE_CHARS)
 
 
 @router.put("/compile/{did}/bullets/{position}")

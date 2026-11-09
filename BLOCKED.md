@@ -1,5 +1,40 @@
 # BLOCKED / deferred — needs a decision or scheduled work, with what unblocks it
 
+- **v0.6.0 is built and gated but NOT deployed (2026-11-09).** Tier 2: the app stores
+  uploaded resumes (personal data) and shares beacon-gom with a paying product, so the
+  deploy needs the operator's word. Branch `feat/workspace-ui`, quality gate 99.75%
+  (`evidence/2026-11-09-quality-gate.md`). Nothing in this release changes the schema:
+  `EXPECTED_TABLE_COUNT` and the estate smoke entry stay as they are.
+  Unblocked by the operator saying "deploy CareerCompiler v0.6.0". The ritual, unchanged:
+  1. Merge `feat/workspace-ui` to `main` (fast-forward), wait for CI green on that SHA.
+  2. Snapshot: on beacon-gom, tag the running image
+     (`docker tag careercompiler-service:latest careercompiler-service:pre-0.6.0`) and
+     `pg_dump` the careercompiler database.
+  3. `ssh beacon-gom`, in the CareerCompiler checkout: `git pull --ff-only`, then
+     `docker compose -f compose.prod.yml build service && docker compose -f compose.prod.yml up -d`
+     (this is what `portfolio-ops/deploy/vps_redeploy.sh` does).
+  4. From the workstation: `python portfolio-ops/scripts/estate_smoke.py --ssh beacon-gom`
+     must exit 0, demo-path gate included. Then load `/workspace/`, `/guide/`, `/demo/`.
+  5. Rollback if any of that fails: retag `pre-0.6.0` as `latest` and `up -d`.
+  6. Tag `v0.6.0` on the CI-green SHA.
+- **No real-model run was made for v0.6.0 (2026-11-09).** Spending against the paid
+  OpenRouter key is a Tier 0 action, so the browser suite uses a scripted LLM. Proven
+  without a key: every route, both gates on the real entailment model, the solver, the
+  documents, the whole interface. NOT proven by this run: that a real model's extraction
+  and phrasing still behave as they did at v0.5.0. No prompt and no model call changed in
+  this release, so the risk is low, and the production demo-path gate in step 4 above is
+  the check that would catch it. Unblocked by the operator authorising one local run
+  against the real key by name: `docker compose up -d --build` then
+  `python scripts/demo_path_smoke.py --base http://localhost:8000`.
+- **Image size margin — RESOLVED 2026-11-09.** A rebuild had drifted to 1.93 GB, over
+  the 1.9 GB assertion, almost all of it dependency and base-image drift. `git` now
+  lives and dies in one build layer: 1.84 GB, 60 MB under the assertion. Verified by a
+  local build, `scripts/assert_image_size.py`, and `scripts/image_selfcheck.py` run
+  inside the image with `--network none` (12 of 12 checks). The unpinned dependencies
+  in `pyproject.toml` will keep drifting; the assertion is the alarm for that.
+- **`llms.txt` for the three tasks and the published limits** (truth layer addendum,
+  2026-11-09, backlog item 4). Deferred: not asked for in this run.
+
 - **Matcher floors — RESOLVED same night for the measured classes (FAIL-0012,
   2026-08-03):** per-embedder floors landed (openrouter 0.75 direct / 0.55
   transferable), chosen from the 35-row labeled corpus curve and verified by re-fit:

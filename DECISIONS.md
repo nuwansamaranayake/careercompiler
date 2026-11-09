@@ -92,6 +92,13 @@ The 1.99 GB figure passed the 2 GB ceiling by 10 MB. That is not a margin — an
 transformers patch release crosses it — so the two build-time artifact directories are removed
 after install, buying 140 MB of real headroom. Nothing with a runtime use was touched.
 
+**2026-11-09 addendum: git leaves in the layer that used it.** A rebuild measured
+1.93 GB: the unpinned Python dependencies and the base image had grown about 33 MB in
+three months, and the v0.6.0 frontend added under 4 MB. `git` was sitting in its own
+100 MB layer for one job, resolving groundwork from a git URL at build time. It is now
+installed, used by `pip install .`, and purged in a single `RUN`. Measured after: **1.84 GB**.
+The price is that the apt step reruns on every source change, about 15 seconds.
+
 **The CPU wheel index is pinned in the Dockerfile and in CI, never in `pyproject.toml`.** A
 plain `pip install torch` on linux resolves the CUDA build. The build asserts
 `torch.version.cuda is None` and fails if a CUDA wheel ever leaks in, because the next person

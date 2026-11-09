@@ -24,6 +24,9 @@ improves what the resume says.
 | The tailored resume is compiled from extracted facts; the job chooses which facts make the page, wording does not shift per job | DECISIONS 004; `tests/test_selector.py` |
 | A cover letter is compiled through the same two gates; greeting, role line, and closing are fixed template text | `tests/test_cover_letter.py` |
 | Editing a line re-runs both gates. An edit that passes is saved and ships in the PDF and docx; an edit that claims more than the cited facts support is rejected and nothing changes | `PUT /api/v1/compile/{did}/bullets/{position}`; `tests/test_edit_bullet.py` |
+| The name on the documents is read from the resume's first line when that line is plainly a name; section headings and job titles are refused; a placeholder is never a guess; the person can correct it | `name_from_resume`, `PATCH /api/v1/candidates/{cid}`; `tests/test_candidate_name.py` |
+| The job title is read from the posting's first line into a visible, required, editable field | `titleFromPosting`; `web/lib/pipeline.test.ts`, e2e |
+| Scores are shown truncated, never rounded up (0.9951 shows 0.99) | `display_score`, `score()`; `tests/test_pdf.py`, `web/lib/format.test.ts` |
 | Resume length is a budget the user picks (half page 14 lines, one page 28 lines); the solver decides what fits | `CompileIn.budget_lines`; `tests/test_selector.py` |
 | Downloads are PDF and docx, each carrying its provenance appendix | `tests/test_pdf.py`, v0.5.0 production read-back |
 | A workspace session is a scoped, budgeted token that expires in 30 minutes; resume data sits in that session's tenant and the retention sweep deletes it once older than 7 days | `tests/test_demo.py`; portfolio-ops retention sweep |

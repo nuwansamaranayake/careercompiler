@@ -52,6 +52,12 @@ def client(monkeypatch):
     ("José Álvarez Núñez", "José Álvarez Núñez"),
     ("Jordan Alvarez, PMP", "Jordan Alvarez"),
     ("Jordan Alvarez | Platform Engineer", "Jordan Alvarez"),
+    ("Vincent van Gogh", "Vincent van Gogh"),
+    ("Maria de la Cruz", "Maria de la Cruz"),
+    ("J.R.R. Tolkien", "J.R.R. Tolkien"),
+    ("J. K. Rowling", "J. K. Rowling"),
+    ("Sinéad O\u2019Brien", "Sinéad O'Brien"),
+    ("Abdullah bin Rashid Al Maktoum", "Abdullah bin Rashid Al Maktoum"),
 ])
 def test_a_name_like_first_line_is_the_name(first_line, expected):
     assert name_from_resume(f"{first_line}\nPortland, Oregon\n") == expected
@@ -63,6 +69,9 @@ def test_a_name_like_first_line_is_the_name(first_line, expected):
     "Senior platform engineer with 10 years of experience building services",
     "Built and operated Python services in production.",
     "Jordan", "platform engineer", "",
+    "Professional Experience", "Technical Skills", "Executive Summary",
+    "Senior Software Engineer", "DATA SCIENTIST", "Work History", "About Me",
+    "Lead Product Manager", "van Gogh", "Registered Nurse",
 ])
 def test_a_first_line_that_is_not_a_name_is_not_guessed(first_line):
     assert name_from_resume(f"{first_line}\nmore text\n") is None

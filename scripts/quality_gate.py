@@ -83,7 +83,20 @@ def _junit(path: Path) -> tuple[int, int, int]:
     return passed, failed, skipped
 
 
-def backend() -> tuple[list[Check], float | None]:
+def _residue(cov: dict) -> list[str]:
+    """Every uncovered line and branch, by file. A score below 100 names what it missed."""
+    out = []
+    for path, f in sorted(cov["files"].items()):
+        lines = [str(n) for n in f.get("missing_lines", [])]
+        branches = [f"{a}->{'exit' if b < 0 else b}" for a, b in f.get("missing_branches", [])]
+        if lines or branches:
+            out.append(f"`{path.replace(chr(92), '/')}`: " + ", ".join(
+                ([f"lines {', '.join(lines)}"] if lines else [])
+                + ([f"branches {', '.join(branches)}"] if branches else [])))
+    return out
+
+
+def backend() -> tuple[list[Check], float | None, list[str]]:
     checks = []
     ok, detail, s = _run("ruff", [PY, "-m", "ruff", "check", "."], ROOT, 120)
     checks.append(Check("backend lint (ruff)", ok, detail, s))
@@ -99,10 +112,12 @@ def backend() -> tuple[list[Check], float | None]:
     passed, failed, _ = _junit(junit)
     checks.append(Check("backend tests (pytest)", ok and failed == 0 and passed > 0,
                         f"{passed} passed, {failed} failed", s))
-    pct = None
+    pct, residue = None, []
     if cov.exists():
-        pct = float(json.loads(cov.read_text(encoding="utf-8"))["totals"]["percent_covered"])
-    return checks, pct
+        data = json.loads(cov.read_text(encoding="utf-8"))
+        pct = float(data["totals"]["percent_covered"])
+        residue = _residue(data)
+    return checks, pct, residue
 
 
 def frontend() -> tuple[list[Check], float | None]:
@@ -145,7 +160,8 @@ def browser() -> Check:
                  f"{passed} passed, {failed} failed, {skipped} skipped", s)
 
 
-def render(checks: list[Check], be: float | None, fe: float | None) -> tuple[str, bool]:
+def render(checks: list[Check], be: float | None, fe: float | None,
+           residue: list[str]) -> tuple[str, bool]:
     def pct(v: float | None) -> str:
         return "not measured" if v is None else f"{v:.2f}%"
 
@@ -179,6 +195,8 @@ def render(checks: list[Check], be: float | None, fe: float | None) -> tuple[str
         "",
         "The score is the lowest coverage, not an average. Every check must pass and a "
         "check that did not run counts as a failure. Logs: `data/local/gate/`.",
+        "",
+        "Backend code not covered: " + ("; ".join(residue) if residue else "none") + ".",
     ]
     return "\n".join(lines) + "\n", passed
 
@@ -189,13 +207,13 @@ def main() -> None:
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
 
-    b_checks, be = backend()
+    b_checks, be, residue = backend()
     f_checks, fe = frontend()
     # The browser suite needs the build the frontend step just produced.
     built = f_checks[-1].ok
     e2e = browser() if built else Check("browser e2e (Chromium, real gates)", False,
                                         "not run: the frontend build failed", 0.0)
-    text, passed = render([*b_checks, *f_checks, e2e], be, fe)
+    text, passed = render([*b_checks, *f_checks, e2e], be, fe, residue)
     print(text)
     if args.report:
         Path(args.report).parent.mkdir(parents=True, exist_ok=True)

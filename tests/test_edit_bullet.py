@@ -162,6 +162,31 @@ def test_empty_text_is_a_validation_error(client, monkeypatch):
                       headers=H).status_code == 422
 
 
+def test_an_edit_too_long_to_be_one_sentence_is_refused_before_the_gate(client, monkeypatch):
+    """The bypass a reviewer found: the original line, then invented claims with no
+    digits, long enough that the model's window cut them off unread. Bounded at the
+    door, for the saved edit and for the live check alike."""
+    did, ids = _compiled(client, monkeypatch)
+    before = _texts(client, did)
+    called = []
+    monkeypatch.setattr(entailment, "_load",
+                        lambda mid, rev: (lambda p, h: called.append(h) or 0.99))
+    padded = before[0] + " Also founded the company and won every award." * 20
+    assert len(padded) > routes.MAX_SENTENCE_CHARS
+
+    r = client.put(f"/api/v1/compile/{did}/bullets/0", json={"text": padded}, headers=H)
+    assert r.status_code == 422
+    r = client.post("/api/v1/compile/check",
+                    json={"document_id": did, "text": padded, "cites": [ids[0]]}, headers=H)
+    assert r.status_code == 422
+    assert called == [], "an over-length edit must never reach the scorer"
+    assert _texts(client, did) == before
+
+    at_limit = ("Led a team of 4 engineers. " * 40)[: routes.MAX_SENTENCE_CHARS]
+    assert client.put(f"/api/v1/compile/{did}/bullets/0", json={"text": at_limit},
+                      headers=H).status_code == 200
+
+
 def test_entailment_outage_is_a_typed_503_and_nothing_changes(client, monkeypatch):
     did, _ = _compiled(client, monkeypatch)
     before = _texts(client, did)

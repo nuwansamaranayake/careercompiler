@@ -27,7 +27,7 @@ const TASKS: Task[] = [
       },
       {
         title: "Paste the job description",
-        body: <>Paste the full posting on the right, including the qualifications section. The title is optional. Then press <strong>Analyze my fit</strong>.</>,
+        body: <>Paste the full posting on the right, including the qualifications section. The job title fills in from the posting&apos;s first line. Correct it if it is wrong, because the cover letter names the role with it. Then press <strong>Analyze my fit</strong>.</>,
         shot: "02-intake-filled.webp", alt: "The intake screen with resume text pasted and a job description pasted",
         caption: "Both inputs filled in. One button runs everything.",
       },
@@ -45,13 +45,13 @@ const TASKS: Task[] = [
     steps: [
       {
         title: "Read the verdict",
-        body: <>The stamp says <strong>apply</strong> or <strong>do not apply</strong>. Beside it, the count of requirements matched, partly matched, and missing. There is no percent score, because a percent would be invented.</>,
+        body: <>The stamp says <strong>apply</strong> or <strong>do not apply</strong>. Beside it, the count of requirements matched, partly matched, and missing. There is no percent score, because a percent would be invented. The same card shows the name your documents will be signed with, read from the first line of your resume. Press <strong>Change</strong> if it is wrong.</>,
         shot: "04-verdict-apply.webp", alt: "The results header with a green APPLY stamp and matched, partial and gap counts",
         caption: "An apply verdict with its counts.",
       },
       {
         title: "Check each requirement",
-        body: <>The table lists every requirement read from the posting. <strong>Matched</strong> has direct evidence. <strong>Partial</strong> has related evidence. <strong>Gap</strong> has none. Must-haves are marked. The evidence column names the fact that earned the status.</>,
+        body: <>The table lists every requirement in the posting&apos;s own words. <strong>Matched</strong> has direct evidence. <strong>Partial</strong> has related evidence. <strong>Gap</strong> has none. Must-haves are marked. The evidence column names the fact that earned the status.</>,
         shot: "05-match-table.webp", alt: "A table of job requirements, each with a status chip and the evidence behind it",
         caption: "Requirement by requirement, with the evidence named.",
       },
@@ -93,7 +93,7 @@ const TASKS: Task[] = [
       },
       {
         title: "Save an honest edit",
-        body: <>Reword the line without adding a claim, then press <strong>Save edit</strong>. Both gates run again. On a pass the line is replaced, marked edited, and the PDF and docx carry it.</>,
+        body: <>Reword the line without adding a claim, then press <strong>Save edit</strong>. Both gates run again. On a pass the line is replaced, marked edited, and the PDF and docx carry it. One line holds up to 600 characters.</>,
         shot: "11-edit-saved.webp", alt: "A saved edit confirmation with the new entailment score",
         caption: "A saved edit. Downloads now carry this line.",
       },
@@ -189,7 +189,11 @@ export default function Guide() {
             <h2>Good to know</h2>
           </div>
         </header>
-        <div className="grid3">
+        <div className="grid2">
+          <div className="card flat">
+            <h3>The name on your documents</h3>
+            <p className="dim small">You are never asked for your name. It is read from the first line of your resume when that line is plainly a name. If it is not, you are asked to type it once. Either way you can change it from the verdict card, and the next download is signed with the new name.</p>
+          </div>
           <div className="card flat">
             <h3>Sessions end on their own</h3>
             <p className="dim small">A session lasts 30 minutes and has a fixed request budget. When it ends you see one screen with one button. Start a new session and run the analysis again.</p>

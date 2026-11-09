@@ -56,7 +56,8 @@ export function Workspace({ mode }: { mode: "own" | "sample" }) {
     try {
       const s = store();
       const result = await runIntake(
-        { api, now: Date.now, session: s ? loadSession(s, Date.now()) : null },
+        { api, now: Date.now, session: s ? loadSession(s, Date.now()) : null,
+          onSession: (session) => { if (s) saveSession(s, session); } },
         next,
         (e) => {
           running = e.state === "start" ? e.id : null;
@@ -65,7 +66,6 @@ export function Workspace({ mode }: { mode: "own" | "sample" }) {
             [e.id]: { state: e.state === "start" ? "running" : "done", note: e.note },
           }));
         });
-      if (s) saveSession(s, result.session);
       setPhase({ at: "results", result });
     } catch (e) {
       const failed = e instanceof PipelineStop ? e.step : running;

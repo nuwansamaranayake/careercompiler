@@ -33,6 +33,12 @@ describe("refusalFrom", () => {
     expect(r?.cited).toEqual([]);
   });
 
+  it("never prints a near miss as the threshold itself", () => {
+    const r = refusalFrom({
+      error: "entailment", violations: [{ text: "x", entailment: 0.6996, threshold: 0.7 }] });
+    expect(r?.why).toBe("the evidence supports it at 0.69, below the 0.7 the gate requires");
+  });
+
   it("falls back to the error name and a placeholder sentence", () => {
     const r = refusalFrom({ error: "render_failed", violations: [{}] });
     expect(r).toEqual({

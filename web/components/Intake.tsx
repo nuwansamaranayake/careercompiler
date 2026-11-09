@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { fileSize } from "@/lib/format";
-import { validateIntake, type IntakeErrors } from "@/lib/pipeline";
+import { titleFromPosting, validateIntake, type IntakeErrors } from "@/lib/pipeline";
 import type { IntakeInput } from "@/lib/types";
 
 type Mode = "file" | "text";
@@ -18,6 +18,13 @@ export function Intake({ initial, onSubmit }: {
     initial.resume?.kind === "text" ? initial.resume.text : "");
   const [jobTitle, setJobTitle] = useState(initial.jobTitle);
   const [jobText, setJobText] = useState(initial.jobText);
+  /* The title follows the posting's first line until the person types their own. */
+  const [titleTouched, setTitleTouched] = useState(initial.jobTitle !== "");
+
+  const onPosting = (text: string) => {
+    setJobText(text);
+    if (!titleTouched) setJobTitle(titleFromPosting(text));
+  };
   const [errors, setErrors] = useState<IntakeErrors>({});
   const [over, setOver] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
@@ -34,7 +41,7 @@ export function Intake({ initial, onSubmit }: {
     const input = current();
     const found = validateIntake(input);
     setErrors(found);
-    if (!found.resume && !found.job) onSubmit(input);
+    if (!found.resume && !found.job && !found.title) onSubmit(input);
   };
 
   return (
@@ -43,7 +50,7 @@ export function Intake({ initial, onSubmit }: {
       <h1 style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}>Bring two things.</h1>
       <p className="lede">
         Your resume and the job description. That is the whole form. The verdict, the
-        tailored resume, and the cover letter are all built from these.
+        tailored resume, and the cover letter are all built from these two.
       </p>
 
       <div className="intake" style={{ marginTop: "2rem" }}>
@@ -110,16 +117,22 @@ export function Intake({ initial, onSubmit }: {
         <section className="card" aria-labelledby="job-h">
           <h3 id="job-h">2 · The job description</h3>
           <div>
-            <label className="field" htmlFor="job-title">Job title <span className="dim" style={{ fontWeight: 400 }}>(optional)</span></label>
+            <label className="field" htmlFor="job-title">Job title</label>
             <input id="job-title" type="text" data-testid="job-title" value={jobTitle}
-              placeholder="e.g. Platform Engineer"
-              onChange={(e) => setJobTitle(e.target.value)} />
+              placeholder="e.g. Platform Engineer" maxLength={80}
+              onChange={(e) => { setJobTitle(e.target.value); setTitleTouched(true); }} />
+            {errors.title
+              ? <p className="err small" role="alert" data-testid="title-error">{errors.title}</p>
+              : <p className="tiny dim" style={{ margin: "0.3rem 0 0" }}>
+                  Filled from the first line of the posting when that is a title. The cover
+                  letter names the role with it, so correct it if it is wrong.
+                </p>}
           </div>
           <div className="grow">
             <label className="field" htmlFor="job-text">Posting text</label>
             <textarea id="job-text" data-testid="job-text" value={jobText}
               placeholder="Paste the full posting, including the qualifications section…"
-              onChange={(e) => setJobText(e.target.value)} />
+              onChange={(e) => onPosting(e.target.value)} />
           </div>
           {errors.job && <p className="err small" role="alert" data-testid="job-error">{errors.job}</p>}
           <p className="tiny dim" style={{ margin: 0 }}>

@@ -243,7 +243,15 @@ def _install_fakes(monkeypatch, id2label, from_pretrained_error=None):
             if from_pretrained_error:
                 raise from_pretrained_error
             assert local_files_only is True
-            return lambda premise, hyp, **kw: {"p": premise, "h": hyp}
+            def tokenize(premise, hyp, **kw):
+                # One token per word: enough to exercise the window check. The scored
+                # call must be the truncating one; the measuring call must not truncate.
+                if kw.get("return_tensors"):
+                    assert kw["truncation"] is True and kw["max_length"] == 512
+                    return {"p": premise, "h": hyp}
+                assert kw["truncation"] is False
+                return {"input_ids": (premise + " " + hyp).split()}
+            return tokenize
 
     class Model:
         def __init__(self):
@@ -272,6 +280,35 @@ def test_load_scorer_reads_entailment_index_from_checkpoint(monkeypatch, fresh_l
     assert score("premise", "same") == pytest.approx(0.8)
     assert score("premise", "much more") == pytest.approx(0.05)
     assert entailment.load_scorer("m", "a" * 40) is score  # cached
+
+
+def test_a_pair_longer_than_the_window_scores_zero_without_asking_the_model(
+        monkeypatch, fresh_load):
+    """Truncation would score only the opening and let appended text pass unread. A
+    sentence the model cannot read whole has no evidence of support: it scores 0.0."""
+    _install_fakes(monkeypatch, {0: "CONTRADICTION", 1: "NEUTRAL", 2: "ENTAILMENT"})
+    score = entailment.load_scorer("m", "a" * 40)
+    at_limit = " ".join(["same"] * (entailment.MAX_PAIR_TOKENS - 1))
+    assert score("premise", at_limit) == pytest.approx(0.8)
+    assert score("premise", at_limit + " tail") == 0.0
+    # Through the gate, that zero is an ordinary violation with the usual evidence.
+    from app.engine.facts import claims_from_entries
+    from app.engine.linker import Bullet
+    [claim] = claims_from_entries([{"claim_key": "k", "kind": "skill", "statement": "premise"}])
+    report = entailment.gate([Bullet(at_limit + " tail", [claim.core.claim_id])], [claim],
+                             0.7, "m", "a" * 40)
+    assert not report.ok and report.violations[0].entailment == 0.0
+    assert "supports this at 0.00, below the 0.70 required" in report.violations[0].detail
+
+
+def test_a_near_miss_score_is_never_printed_as_the_threshold():
+    """0.6996 against 0.70 used to print 'supports this at 0.70, below the 0.70'."""
+    v = entailment.EntailmentViolation(0, "t", "p", 0.6996, 0.7)
+    assert "supports this at 0.69, below the 0.70 required" in v.detail
+    report = entailment.GateReport(model_id="m", model_revision="r")
+    report.violations.append(v)
+    assert "scored 0.69 against its cited facts (threshold 0.70)" in str(
+        entailment.EntailmentError(report))
 
 
 def test_load_refuses_missing_revision(fresh_load):

@@ -24,7 +24,7 @@ every planned row is not yet served.
 | Create a job (optionally with requirements) | POST | `/api/v1/jobs` | implemented | Entry-path requirements accepted inline. |
 | Parse the JD into requirements (LLM) | POST | `/api/v1/jobs/{jid}/requirements/parse` | implemented | Key-gated, schema-forced. |
 | Run the fit | POST | `/api/v1/fit` | implemented | Deterministic matcher + persisted Fit Report with the honest apply / do-not-apply verdict. |
-| Read a fit report | GET | `/api/v1/fit/{rid}` | implemented | Stored report + per-requirement match rows. Bearer auth when `SMOKE_TEST_TOKEN` set. |
+| Read a fit report | GET | `/api/v1/fit/{rid}` | implemented | Stored report + per-requirement match rows; each row carries `requirement`, the posting's own wording, beside `req_key`. Bearer auth when `SMOKE_TEST_TOKEN` set. |
 | Set a claim's verification state | POST | `/api/v1/facts/{claim_id}/verify` | implemented | Records human verification on one atomic claim. Humans approve; the model never does. |
 | Compile a resume (select → render → gate) | POST | `/api/v1/compile` | implemented | Selector chooses under the budget, LLM phrases, linker and entailment gate reject anything stronger than its evidence. Persists only documents that passed both gates. Rejected drafts are re-rendered with the rejection reason for at most three audited rounds (`repair` in the response); the gates issue every verdict. |
 | Compile a cover letter (same gates, letter voice) | POST | `/api/v1/cover-letter` | implemented | Same select → render → link → gate pipeline as the resume; the job-referential frame is deterministic template text, the model writes only gated evidence sentences. |
@@ -36,3 +36,29 @@ every planned row is not yet served.
 | Build the interview preparation pack | POST | `/api/v1/interview-pack` | implemented | From gate-survivors only: cited facts verbatim (the story), their numbers (the metrics), fit-report gaps with the case against; the model writes only the skeptical questions. Stateless; `format: docx` returns the document. |
 | Upload a resume file (PDF/docx) | POST | `/api/v1/candidates/upload` | implemented | Multipart; text extracted server-side, stored as the source document for span-anchored extraction. 415 on other formats, 422 when no text is extractable. |
 | Open a demo session | POST | `/api/v1/demo/session` | implemented | Issues a scoped, short-lived, rate-limited bearer token bound to a demo tenant. Business reads stay bearer-authenticated. |
+
+## Frontend map (web/lib/api.ts)
+
+One function per endpoint. `tests/e2e/` drives every one of these through a real browser.
+
+| Function | Endpoint | Used by |
+|---|---|---|
+| `openSession` | `POST /api/v1/demo/session` | workspace intake, sample |
+| `uploadResume` | `POST /api/v1/candidates/upload` | intake, file resume |
+| `createCandidate` | `POST /api/v1/candidates` | intake, pasted resume |
+| `renameCandidate` | `PATCH /api/v1/candidates/{cid}` | verdict card, name on documents |
+| `extractFacts` | `POST /api/v1/candidates/{cid}/claims/extract` | intake |
+| `createJob` | `POST /api/v1/jobs` | intake |
+| `parseJob` | `POST /api/v1/jobs/{jid}/requirements/parse` | intake |
+| `runFit` | `POST /api/v1/fit` | intake |
+| `getFit` | `GET /api/v1/fit/{rid}` | career match tab |
+| `compileResume` | `POST /api/v1/compile` | resume tab |
+| `compileLetter` | `POST /api/v1/cover-letter` | cover letter tab |
+| `getDocument` | `GET /api/v1/compile/{did}` | resume and letter tabs, evidence |
+| `checkLine` | `POST /api/v1/compile/check` | line editor, check only |
+| `saveLine` | `PUT /api/v1/compile/{did}/bullets/{position}` | line editor, save |
+| `downloadDocument` | `GET /api/v1/compile/{did}/pdf`, `/docx` | resume and letter tabs |
+| `buildPack`, `downloadPack` | `POST /api/v1/interview-pack` | interview prep tab |
+
+Not called by the frontend: `/health`, `/api/v1/demo`, `POST /api/v1/candidates/{cid}/claims`,
+`POST /api/v1/facts/{claim_id}/verify` (operator and data-entry paths).

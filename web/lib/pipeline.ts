@@ -20,9 +20,26 @@ export const STEPS: { id: StepId; label: string }[] = [
 export const MAX_UPLOAD_BYTES = 2_000_000;
 export const MIN_RESUME_CHARS = 200;
 export const MIN_JOB_CHARS = 120;
-export const DEFAULT_JOB_TITLE = "The role you pasted";
+export const MAX_TITLE_CHARS = 80;
 
-export type IntakeErrors = { resume?: string; job?: string };
+export type IntakeErrors = { resume?: string; job?: string; title?: string };
+
+/* The job title, when the posting's first line plainly is one: short, a handful of
+   words, not a sentence. The cover letter names the role in fixed template text, so a
+   wrong title is worse than an empty field the person fills in. */
+export function titleFromPosting(jobText: string): string {
+  const first = jobText.split(/\r?\n/).map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+  const words = first.split(/\s+/).length;
+  if (first.length > MAX_TITLE_CHARS || words > 8 || /[.!?:]$/.test(first)) return "";
+  return first;
+}
+
+export function validateTitle(jobTitle: string): string | undefined {
+  const t = jobTitle.trim();
+  if (!t) return "Add the job title. The cover letter names the role.";
+  if (t.length > MAX_TITLE_CHARS) return `Keep the job title under ${MAX_TITLE_CHARS} characters.`;
+  return undefined;
+}
 
 export function validateResume(resume: ResumeInput | null): string | undefined {
   if (!resume) return "Add your resume: drop a PDF or docx, or paste the text.";
@@ -51,8 +68,10 @@ export function validateIntake(input: IntakeInput): IntakeErrors {
   const errors: IntakeErrors = {};
   const resume = validateResume(input.resume);
   const job = validateJob(input.jobText);
+  const title = validateTitle(input.jobTitle);
   if (resume) errors.resume = resume;
   if (job) errors.job = job;
+  if (title) errors.title = title;
   return errors;
 }
 
@@ -74,6 +93,10 @@ export type PipelineDeps = {
   now: () => number;
   /* An already-open live session is reused, so a second analysis costs no session. */
   session: StoredSession | null;
+  /* Called as soon as a session exists, before any step that can stop the run: a
+     build that stops on a scanned PDF must not cost a fresh session on every retry,
+     because sessions are rate-limited per address. */
+  onSession: (session: StoredSession) => void;
 };
 
 export async function runIntake(
@@ -81,6 +104,8 @@ export async function runIntake(
 ): Promise<IntakeResult> {
   const { resume } = input;
   if (!resume) throw new PipelineStop("resume", "No resume was provided.");
+  const jobTitle = input.jobTitle.trim();
+  if (!jobTitle) throw new PipelineStop("job", "No job title was provided.");
 
   async function step<T>(id: StepId, run: () => Promise<T>, note: (r: T) => string): Promise<T> {
     onStep({ id, state: "start" });
@@ -92,6 +117,7 @@ export async function runIntake(
   const session = await step("session",
     async () => deps.session ?? stamp(await deps.api.openSession(), deps.now()),
     (s) => `${s.request_budget} requests, expires on its own`);
+  deps.onSession(session);
   const token = session.token;
 
   const stored = await step("resume",
@@ -117,7 +143,6 @@ export async function runIntake(
       "If this is a scanned PDF, paste the text instead.");
   }
 
-  const jobTitle = input.jobTitle.trim() || DEFAULT_JOB_TITLE;
   const job = await step("job",
     () => deps.api.createJob(token, jobTitle, input.jobText),
     () => jobTitle);

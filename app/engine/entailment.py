@@ -40,6 +40,10 @@ def display_score(score: float) -> str:
     return f"{math.floor(score * 100 + 1e-9) / 100:.2f}"
 
 
+# The checkpoint reads at most this many tokens of premise plus sentence.
+MAX_PAIR_TOKENS = 512
+
+
 class EntailmentUnavailable(Exception):
     """The gate could not run. This fails the build; it never degrades to a weaker check."""
 
@@ -52,8 +56,8 @@ class EntailmentError(Exception):
         first = report.violations[0]
         super().__init__(
             f"{len(report.violations)} sentence(s) outran their evidence; first: "
-            f"{first.text!r} scored {first.entailment:.2f} against its cited facts "
-            f"(threshold {first.threshold:.2f})")
+            f"{first.text!r} scored {display_score(first.entailment)} against its cited "
+            f"facts (threshold {first.threshold:.2f})")
 
 
 @dataclass(frozen=True)
@@ -66,7 +70,7 @@ class EntailmentViolation:
 
     @property
     def detail(self) -> str:
-        return (f"the cited evidence supports this at {self.entailment:.2f}, below the "
+        return (f"the cited evidence supports this at {display_score(self.entailment)}, below the "
                 f"{self.threshold:.2f} required; the sentence claims more than the fact does")
 
 
@@ -133,8 +137,14 @@ def _load(model_id: str, revision: str) -> Callable[[str, str], float]:
     entail_idx = labels["entailment"]
 
     def score(premise: str, hypothesis: str) -> float:
+        # A pair that does not fit the window is not scored on its opening. Truncation
+        # drops the tail of the longer text, which is the sentence: anything appended
+        # past the window would pass unread (review finding, 2026-11-09). A sentence the
+        # model cannot read whole has no evidence of support, so it scores zero.
+        if len(tok(premise, hypothesis, truncation=False)["input_ids"]) > MAX_PAIR_TOKENS:
+            return 0.0
         with torch.no_grad():
-            batch = tok(premise, hypothesis, truncation=True, max_length=512,
+            batch = tok(premise, hypothesis, truncation=True, max_length=MAX_PAIR_TOKENS,
                         return_tensors="pt")
             probs = torch.softmax(model(**batch).logits[0], dim=-1)
         return float(probs[entail_idx])

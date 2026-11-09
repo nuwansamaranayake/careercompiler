@@ -56,6 +56,30 @@ Separate the fact base from the rendering, and put a deterministic linker betwee
 4. **The Fit Report** decomposes the JD into typed requirements and scores each against the graph:
    matched, transferable, or unmatched, and will tell you honestly not to apply.
 
+## Use it
+
+Open `/workspace/`, add a resume and a job description, and press **Analyze my fit**.
+You get a fit verdict, then a tailored resume, a cover letter, and an interview prep
+pack, each built from facts found in the resume. `/demo/` runs the same screens on a
+synthetic candidate. `/guide/` walks through every step with screenshots; the same guide
+is in `docs/guide/CareerCompiler-Visual-Guide.pdf`.
+
+## Quality gate
+
+```bash
+python scripts/quality_gate.py        # or: make quality
+```
+
+One number: the lowest of backend coverage (`app/`, line and branch) and frontend
+coverage (`web/lib/`). Floor 96. The gate also requires ruff, pytest, tsc, eslint,
+vitest, the production frontend build, and the browser suite to run and pass. Last
+recorded run: `evidence/2026-11-09-quality-gate.md` (99.75%).
+
+The browser suite (`tests/e2e/`) drives real Chromium against `scripts/e2e_server.py`:
+the real app and the real entailment model, with sqlite, FakeRedis, and a scripted LLM
+as the only doubles. It needs the frontend built (`npm run build` in `web/`), Playwright's
+Chromium, and the pinned entailment weights under `HF_HOME` (default `data/local/hf`).
+
 ## What exists today (verified)
 
 This scaffold's doctrine is already enforced, not promised. Three checks you can run in five minutes:

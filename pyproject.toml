@@ -36,6 +36,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov", "ruff"]
+# The browser suite and the guide capture. torch and transformers are NOT listed here:
+# the CPU wheel index is pinned where they are installed (Dockerfile, ci.yml), because a
+# plain `pip install torch` on linux resolves the CUDA build.
+e2e = ["playwright", "pillow"]
 
 [tool.setuptools]
 packages = ["app"]

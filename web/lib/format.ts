@@ -21,7 +21,7 @@ export function refusalFrom(detail: unknown): Refusal | null {
   const v = d.violations[0];
   const why = v.detail
     ?? (v.entailment != null
-      ? `the evidence supports it at ${v.entailment.toFixed(2)}, below the ${v.threshold} the gate requires`
+      ? `the evidence supports it at ${score(v.entailment)}, below the ${v.threshold} the gate requires`
       : d.error);
   // One attempt per failed evaluation round. The revision_unchanged marker is the loop
   // stopping honestly, not an attempt. Never a count the log does not carry.

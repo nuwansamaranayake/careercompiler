@@ -148,7 +148,7 @@ export function Results({
                   {report.rows.map((r) => (
                     <tr key={r.req_key}>
                       <td>
-                        <span className="req">{humanKey(r.req_key)}</span>
+                        <span className="req">{r.requirement ?? humanKey(r.req_key)}</span>
                         {r.must_have && <span className="must">must-have</span>}
                       </td>
                       <td><Chip tone={statusTone(r.status)}>{r.status}</Chip></td>

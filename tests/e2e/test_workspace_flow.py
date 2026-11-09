@@ -54,6 +54,9 @@ def test_pasted_resume_to_verdict_resume_edit_and_cover_letter(page):
     expect(page.get_by_test_id("signed-as")).to_contain_text("first line of your resume")
     rows = page.get_by_test_id("fit-table").locator("tbody tr")
     expect(rows).to_have_count(5)
+    # Requirements appear in the posting's own words, not as machine keys.
+    expect(rows.nth(0)).to_contain_text("Built and operated Python services")
+    expect(rows.nth(2)).to_contain_text("Led a team of engineers")
     expect(rows.nth(0)).to_contain_text("must-have")
     expect(rows.nth(0)).to_contain_text("matched")
     expect(rows.nth(4)).to_contain_text("gap")
@@ -90,6 +93,8 @@ def test_pasted_resume_to_verdict_resume_edit_and_cover_letter(page):
     # An overstated verb passes the linker and is rejected by the real entailment model.
     page.get_by_test_id("edit-text").fill(
         "Directed the entire engineering organisation at Acme Corp.")
+    # A verdict belongs to the text it checked: typing clears the old one.
+    expect(page.get_by_test_id("gate-verdict")).to_have_count(0)
     page.get_by_test_id("check-edit").click()
     verdict = page.get_by_test_id("gate-verdict")
     expect(verdict).to_have_attribute("data-ok", "false")
@@ -148,6 +153,8 @@ def test_pasted_resume_to_verdict_resume_edit_and_cover_letter(page):
     pack = page.get_by_test_id("pack")
     expect(pack).to_contain_text(samples.HONEST_EDIT)
     expect(pack).to_contain_text("experience with rust", ignore_case=True)
+    # No title was mangled into the letter's fixed frame.
+    assert "the The" not in page.get_by_test_id("letter-sheet").inner_text()
     _no_unexpected_errors(page, allow="422")
 
 
@@ -161,11 +168,13 @@ def test_uploaded_docx_resume_reaches_a_verdict(page, tmp_path):
     page.goto("/workspace/")
     page.get_by_test_id("resume-file").set_input_files(str(path))
     expect(page.get_by_test_id("resume-file-chosen")).to_contain_text("jordan-alvarez.docx")
+    # No title typed: it is read from the posting's first line, visibly, before the run.
     page.get_by_test_id("job-text").fill(samples.JOB)
+    expect(page.get_by_test_id("job-title")).to_have_value("Platform Engineer")
     page.get_by_test_id("analyze").click()
 
     expect(page.get_by_test_id("verdict-stamp")).to_have_attribute("data-verdict", "apply")
-    expect(page.get_by_test_id("verdict")).to_contain_text("The role you pasted")
+    expect(page.get_by_test_id("verdict")).to_contain_text("Platform Engineer")
     expect(page.get_by_test_id("signed-as")).to_contain_text("Jordan Alvarez")
     expect(page.get_by_test_id("verdict")).to_contain_text("5 facts anchored in your resume")
     _no_unexpected_errors(page)
@@ -178,7 +187,7 @@ def test_a_planted_must_have_gap_is_do_not_apply_with_the_case_stated(page):
     expect(stamp).to_have_attribute("data-verdict", "do_not_apply")
     expect(stamp).to_have_text("do not apply")
     expect(page.get_by_test_id("case-against")).to_contain_text("The case against applying")
-    clearance = page.get_by_test_id("fit-table").locator("tbody tr", has_text="active ts sci")
+    clearance = page.get_by_test_id("fit-table").locator("tbody tr", has_text="Active TS/SCI security clearance")
     expect(clearance).to_contain_text("must-have")
     expect(clearance).to_contain_text("gap")
     _no_unexpected_errors(page)
@@ -192,7 +201,13 @@ def test_the_form_refuses_to_run_on_missing_inputs(page):
 
     expect(page.get_by_test_id("resume-error")).to_contain_text("Add your resume")
     expect(page.get_by_test_id("job-error")).to_contain_text("Paste the full job description")
+    expect(page.get_by_test_id("title-error")).to_contain_text("Add the job title")
     assert requests == [], "validation must stop the run before any API call"
+
+    # A typed title is the person's; pasting a posting afterwards must not overwrite it.
+    page.get_by_test_id("job-title").fill("Staff Engineer")
+    page.get_by_test_id("job-text").fill(samples.JOB)
+    expect(page.get_by_test_id("job-title")).to_have_value("Staff Engineer")
 
     page.get_by_test_id("resume-paste-tab").click()
     page.get_by_test_id("resume-text").fill("too short")
@@ -211,10 +226,49 @@ def test_a_posting_with_no_requirements_stops_the_build_and_keeps_the_inputs(pag
     expect(log.locator('li[data-step="requirements"]')).to_have_attribute("data-state", "failed")
     expect(log.locator('li[data-step="match"]')).to_have_attribute("data-state", "pending")
 
+    # The session opened for the stopped build is kept, so the retry does not spend
+    # another one (sessions are rate-limited per address).
+    token = page.evaluate("JSON.parse(sessionStorage.getItem('cc-session')).token")
+    assert token
+
     page.get_by_test_id("edit-inputs").click()
     expect(page.get_by_test_id("resume-text")).to_have_value(re.compile("Jordan Alvarez"))
     expect(page.get_by_test_id("job-text")).to_have_value(re.compile("friendly company"))
+    page.get_by_test_id("job-text").fill(samples.JOB)
+    page.get_by_test_id("analyze").click()
+    expect(page.get_by_test_id("verdict-stamp")).to_have_attribute("data-verdict", "apply")
+    assert page.evaluate("JSON.parse(sessionStorage.getItem('cc-session')).token") == token
     _no_unexpected_errors(page)
+
+
+def test_a_compiled_document_survives_a_failed_evidence_load(page):
+    _analyze(page)
+    expect(page.get_by_test_id("verdict-stamp")).to_be_visible()
+
+    # The compile succeeds; the follow-up read of its provenance fails once.
+    doc_read = re.compile(r"/api/v1/compile/\d+$")
+    page.route(doc_read, lambda route: route.fulfill(
+        status=500, content_type="application/json", body='{"detail": "database is busy"}')
+        if route.request.method == "GET" else route.continue_())
+    page.get_by_test_id("tab-resume").click()
+    page.get_by_test_id("compile-resume").click()
+
+    sheet = page.get_by_test_id("resume-sheet")
+    expect(sheet.locator(".line")).to_have_count(5)
+    expect(page.get_by_test_id("evidence-error")).to_contain_text("database is busy")
+    # The document was not thrown away: it downloads, and interview prep can see it.
+    with page.expect_download() as dl:
+        page.get_by_test_id("resume-download-pdf").click()
+    assert "Jordan Alvarez" in _pdf_text(dl.value.path())
+
+    page.unroute(doc_read)
+    page.get_by_test_id("evidence-retry").click()
+    expect(page.get_by_test_id("evidence-error")).to_have_count(0)
+    page.get_by_test_id("resume-line-0").click()
+    expect(page.get_by_test_id("line-editor")).to_contain_text("document sourced")
+    page.get_by_test_id("tab-prep").click()
+    expect(page.get_by_test_id("build-pack")).to_be_visible()
+    _no_unexpected_errors(page, allow="500")
 
 
 def test_a_resume_without_a_readable_name_asks_for_one(page):
