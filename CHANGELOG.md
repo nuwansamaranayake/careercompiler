@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Operations] - 2026-11-09
+
+- **Daily retention sweep on the production host** (`scripts/retention_sweep.py`, cron
+  03:17 UTC). The 7-day deletion promise no longer depends on a person running the
+  estate smoke. No image change: the script runs from the host checkout.
+
 ## [0.6.0] - 2026-11-09 (in production at `9395178`)
 
 The workspace: a resume and a job description in, three documents out.

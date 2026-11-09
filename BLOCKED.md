@@ -10,13 +10,15 @@
   Still on the host: image tags `pre-0.6.0` (v0.5.0) and `v0.6.0-failed-smoke`, and the
   backups in `/opt/aignite-portfolio/backups`, including two copies of the old `.env`
   that hold only the revoked key.
-- **Retention only runs when somebody runs the estate smoke (found 2026-11-09).** At
-  deploy time production held 25 session tenants older than 7 days, the oldest from
-  2026-09-08, while the site says such data is deleted once older than 7 days. Nothing
-  on the host schedules the sweep. The estate run at the end of this deploy cleared all
-  25 (148 rows; zero aged tenants remain). It will drift again. Unblocked by scheduling
-  `estate_smoke.py --ssh beacon-gom --app careercompiler` or the sweep alone, daily. That
-  is a standing job on the operator's machine or the host, so it needs the operator's yes.
+- **Retention had no schedule — RESOLVED 2026-11-09.** At deploy time production held 25
+  session tenants older than 7 days, the oldest from 2026-09-08, because the sweep only
+  ran inside the estate smoke. Now a daily cron on beacon-gom (03:17 UTC) runs
+  `scripts/retention_sweep.py`: the sweep alone, no HTTP, no model call, no SSH, using
+  portfolio-ops' `retention.py` rules. Log: `/opt/aignite-portfolio/retention/careercompiler.log`,
+  one line per run. Proven by a manual run and by cron itself firing it at 18:12:02 UTC.
+  Two things it depends on: the host's `portfolio-ops/scripts/retention.py` (untracked
+  there, byte-identical to origin today), and someone reading the log. A `FAILED` line
+  alerts nobody yet: alert delivery needs `RESEND_API_KEY`, which is not set.
 - **The estate smoke is fragile from this workstation (2026-11-09).** It opens one SSH
   connection per SQL statement. With many aged tenants to sweep, one connection failed
   with an empty error (`probe command failed:`) and the run then stalled until killed.
