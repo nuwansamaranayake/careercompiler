@@ -2,11 +2,13 @@
 
 - **v0.6.0 is built and gated but NOT deployed (2026-11-09).** Tier 2: the app stores
   uploaded resumes (personal data) and shares beacon-gom with a paying product, so the
-  deploy needs the operator's word. Branch `feat/workspace-ui`, quality gate 99.75%
-  (`evidence/2026-11-09-quality-gate.md`). Nothing in this release changes the schema:
+  deploy needs the operator's word. Merged to `main` by fast-forward; CI green on all
+  six jobs (run 42600081391 on `bc3c1c3`: lint, tests on 3.12 and 3.13, eval, the stack
+  smoke with image size and self-check, and the quality gate). Quality gate 99.75%
+  locally and on the CI runner (`evidence/2026-11-09-quality-gate.md`). Nothing in this release changes the schema:
   `EXPECTED_TABLE_COUNT` and the estate smoke entry stay as they are.
   Unblocked by the operator saying "deploy CareerCompiler v0.6.0". The ritual, unchanged:
-  1. Merge `feat/workspace-ui` to `main` (fast-forward), wait for CI green on that SHA.
+  1. Done 2026-11-09: `main` carries the release. Confirm CI is green on the SHA you deploy.
   2. Snapshot: on beacon-gom, tag the running image
      (`docker tag careercompiler-service:latest careercompiler-service:pre-0.6.0`) and
      `pg_dump` the careercompiler database.
@@ -32,6 +34,11 @@
   local build, `scripts/assert_image_size.py`, and `scripts/image_selfcheck.py` run
   inside the image with `--network none` (12 of 12 checks). The unpinned dependencies
   in `pyproject.toml` will keep drifting; the assertion is the alarm for that.
+- **`boto3` is an unused dependency (noticed 2026-11-09, not removed).** No code imports
+  it, and with botocore it costs about 35 MB of image. The compose MinIO service it was
+  scaffolded for is gone. Left in place because removing a declared dependency was not
+  part of this run. Unblocked by the operator agreeing it can go; then delete it from
+  `pyproject.toml` and the `S3_*` block from `.env.example`.
 - **`llms.txt` for the three tasks and the published limits** (truth layer addendum,
   2026-11-09, backlog item 4). Deferred: not asked for in this run.
 
