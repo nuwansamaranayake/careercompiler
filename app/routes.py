@@ -37,7 +37,7 @@ from .engine.pdf_out import render_letter_pdf, render_pdf
 from .engine.embedding import (EmbedderUnavailable, HashingEmbedder,
                                OpenRouterEmbedder)
 from .engine.entailment import EntailmentUnavailable
-from .engine.facts import AtomicClaim, claims_from_entries, extract_facts
+from .engine.facts import AtomicClaim, Provenance, claims_from_entries, extract_facts
 from .engine.fit import build_report
 from .engine.interview import draft_questions, metrics_of, render_pack_docx
 from .engine.jd import parse_jd, requirements_from_entries, Requirement
@@ -169,13 +169,59 @@ def _load_claims(s, candidate_id: int) -> list[AtomicClaim]:
         entry = {"claim_key": r["claim_key"], "kind": r["kind"], "statement": r["statement"]}
         [c] = claims_from_entries([entry], source_name=r["source"])
         c.core.verification.status = r["verification_status"]
+        # The entry constructor stamps self_attested and no span on everything it builds.
+        # What was stored is the truth: restore it, or a fact extracted from a resume
+        # reads back as self-attested in every provenance map (found 2026-11-09).
+        c.provenance = Provenance(r["provenance"])
+        if r["span_start"] is not None and r["span_end"] is not None:
+            c.core.evidence_ref.span = (r["span_start"], r["span_end"])
         out.append(c)
     return out
 
 
 class CandidateIn(BaseModel):
-    name: str = Field(min_length=1)
+    # Optional since the workspace asks for a resume and a posting only: with no name
+    # given, the name is read from the resume's first line (see name_from_resume).
+    name: str | None = Field(default=None, min_length=1)
     resume_text: str | None = None
+
+
+class RenameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+PLACEHOLDER_NAME = "Your Name"
+_NAME_TOKEN = re.compile(r"^[^\W\d_][^\W\d_'.\-]*(?:['\-][^\W\d_]+)*\.?$")
+_NOT_NAMES = {"curriculum vitae", "resume", "résumé", "cv", "professional summary",
+              "summary", "profile", "personal profile", "work experience", "experience",
+              "contact information", "career objective", "objective"}
+
+
+def name_from_resume(text: str) -> str | None:
+    """The candidate's name, when the resume's first line plainly is one. Else None.
+
+    Deterministic on purpose: this value signs a cover letter, so it is a rule a person
+    can read and correct, never a model's guess. A name here is two to four capitalised
+    words with no digits, no punctuation beyond . ' -, and nothing after a comma or a
+    bar (credentials, a headline). Anything else is not guessed at."""
+    first = next((ln.strip() for ln in text.replace("\r", "").split("\n") if ln.strip()), "")
+    first = re.split(r"\s*[,|•·]\s*|\s+[\u2013\u2014-]\s+", first)[0]
+    tokens = first.split()
+    if not 2 <= len(tokens) <= 4 or len(first) > 60 or first.lower() in _NOT_NAMES:
+        return None
+    if not all(_NAME_TOKEN.match(tok) and tok[0].isupper() for tok in tokens):
+        return None
+    if first.isupper():
+        tokens = [tok.capitalize() for tok in tokens]
+    return " ".join(tokens)
+
+
+def _resolve_name(given: str | None, resume_text: str | None) -> tuple[str, str]:
+    """(name, name_source). A provided name always wins; a placeholder is never a guess."""
+    if given and given.strip():
+        return given.strip(), "provided"
+    found = name_from_resume(resume_text or "")
+    return (found, "resume_first_line") if found else (PLACEHOLDER_NAME, "placeholder")
 
 
 class ClaimsIn(BaseModel):
@@ -197,14 +243,37 @@ class FitIn(BaseModel):
 @router.post("/candidates", status_code=201)
 def create_candidate(body: CandidateIn, authorization: str | None = Header(default=None)):
     scope = _auth(authorization)
+    name, source = _resolve_name(body.name, body.resume_text)
     with db.get_session() as s, s.begin():
         cid = s.execute(db.candidates.insert().values(
-            name=f"{scope or ''}{body.name}")).inserted_primary_key[0]
+            name=f"{scope or ''}{name}")).inserted_primary_key[0]
         if body.resume_text:
             s.execute(db.source_documents.insert().values(
                 candidate_id=cid, name="resume.txt",
                 text=_normalize_doc_text(body.resume_text)))
-    return {"candidate_id": cid}
+    return {"candidate_id": cid, "name": name, "name_source": source}
+
+
+@router.patch("/candidates/{cid}")
+def rename_candidate(cid: int, body: RenameIn,
+                     authorization: str | None = Header(default=None)):
+    """Correct the name on the documents. Documents read the name at render time, so a
+    rename signs the next download without a recompile. The row's tenant prefix is kept
+    whoever renames it: the retention sweep finds personal data by that prefix."""
+    scope = _auth(authorization)
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name must not be blank")
+    with db.get_session() as s, s.begin():
+        row = s.execute(sa.select(db.candidates.c.name)
+                        .where(db.candidates.c.id == cid)).first()
+        if row is None:
+            raise HTTPException(status_code=404, detail="candidate not found")
+        _guard(s, scope, candidate_id=cid)
+        prefix = row.name[: len(row.name) - len(_display(row.name))]
+        s.execute(db.candidates.update().where(db.candidates.c.id == cid)
+                  .values(name=f"{prefix}{name}"))
+    return {"candidate_id": cid, "name": name, "name_source": "provided"}
 
 
 @router.post("/candidates/{cid}/claims", status_code=201)
@@ -970,7 +1039,7 @@ def _normalize_doc_text(text: str) -> str:
 
 
 @router.post("/candidates/upload", status_code=201)
-async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
+async def upload_candidate(name: str = Form(default=""), file: UploadFile = File(...),
                            authorization: str | None = Header(default=None)):
     """Resume upload, PDF or docx (E5). Text is extracted server-side, normalized of
     layout artifacts, and stored as the source document; span anchoring during claim
@@ -995,6 +1064,9 @@ async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
     except Exception:
         raise HTTPException(status_code=422,
                             detail="the file could not be parsed as PDF or docx")
+    # The name is read from the text as extracted, before layout normalization joins
+    # the first line into the paragraph under it.
+    name, source = _resolve_name(name, text)
     text = _normalize_doc_text(text)
     if not text.strip():
         raise HTTPException(status_code=422,
@@ -1005,7 +1077,7 @@ async def upload_candidate(name: str = Form(...), file: UploadFile = File(...),
             name=f"{scope or ''}{name}")).inserted_primary_key[0]
         s.execute(db.source_documents.insert().values(
             candidate_id=cid, name=fn, text=text))
-    return {"candidate_id": cid, "chars": len(text)}
+    return {"candidate_id": cid, "chars": len(text), "name": name, "name_source": source}
 
 
 @router.get("/compile/{did}/pdf")

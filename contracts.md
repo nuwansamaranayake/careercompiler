@@ -18,6 +18,7 @@ every planned row is not yet served.
 | OpenAPI schema | GET | `/openapi.json` | implemented (not in schema) | Served by FastAPI; this file is checked against it in CI. |
 | Load demo fixture | GET | `/api/v1/demo` | implemented | Development-only; 503 outside development (Standard 3). |
 | Create a candidate (optionally with resume) | POST | `/api/v1/candidates` | implemented | Stores the resume as a source document when given. Bearer auth when `SMOKE_TEST_TOKEN` set. |
+| Correct the name on the documents | PATCH | `/api/v1/candidates/{cid}` | implemented | Renames the candidate, keeping the row's tenant prefix. Documents read the name at render time, so the next PDF or docx is signed with it; no recompile. |
 | Enter claims (keyless, self-attested) | POST | `/api/v1/candidates/{cid}/claims` | implemented | Explicit data-entry path, flagged `self_attested`. |
 | Extract atomic claims from the resume (LLM) | POST | `/api/v1/candidates/{cid}/claims/extract` | implemented | Key-gated (typed 503 without a key). Span-anchored; failed anchors stored as rejected and never match. |
 | Create a job (optionally with requirements) | POST | `/api/v1/jobs` | implemented | Entry-path requirements accepted inline. |

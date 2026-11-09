@@ -1,83 +1,136 @@
-/* The landing page. Every sentence here traces to docs/agent-legibility/
-   2026-08-03-frontend-truth-layer.md; the limits block is verbatim from EVAL.md and the
-   deploy gate asserts it stays that way. */
+/* The landing page. Every sentence here traces to docs/agent-legibility/ (the 2026-08-03
+   truth layer and its 2026-11-09 addendum). The limits block is verbatim from EVAL.md
+   and the deploy gate asserts it stays that way. */
 import Link from "next/link";
-
-const LIMITS =
-  "On a golden suite of 4 labelled job cases against a 6-fact synthetic career graph, " +
-  "the analyzer places every requirement in the right bucket (matcher accuracy 1.0), " +
-  "returns the correct apply or do-not-apply verdict on every case including planted " +
-  "disqualifying gaps (1.0), never presents transferable evidence as direct (0 " +
-  "violations), and holds its verdict across pre-authored paraphrases of the job " +
-  "description (1.0); the suite is synthetic and small, so it does not measure " +
-  "performance on real resumes or real postings. The Phase 2 compiler rejects a " +
-  "sentence that claims more than its cited evidence supports: on the pinned entailment " +
-  "model a faithful sentence scored 0.9976 and an inflated verb 0.0015, but the 0.7 " +
-  "threshold is not yet calibrated between those extremes, so a borderline honest " +
-  "paraphrase can be rejected; compile-time rejection is measured, fabrication recall " +
-  "in the wild is not.";
+import { LIMITS } from "@/lib/limits";
 
 export default function Landing() {
   return (
     <>
-      <p className="dim mono small">CareerCompiler · an AiGNITE portfolio build</p>
-      <h1>A resume compiler with compile errors.</h1>
-      <p>
-        Your resume is compiled from a graph of career facts, each carrying its provenance
-        and its span into the source document. Every rendered
-        sentence cites the facts that license it. A sentence that cites nothing, carries a
-        number found in no cited fact, or claims more than its evidence supports{" "}
-        <strong>fails the build</strong> — scored against the cited facts by a pinned
-        entailment model, with the score shown.
-      </p>
+      <section className="hero">
+        <div className="reveal">
+          <p className="eyebrow">Two inputs · three documents · every sentence cited</p>
+          <h1>A resume compiler with <em>compile errors.</em></h1>
+          <p className="lede">
+            Bring a resume and a job description. Get an honest verdict, a tailored resume,
+            and a cover letter. Every sentence cites a fact from your own resume. A sentence
+            that claims more than its evidence supports fails the build.
+          </p>
+          <div className="row actions">
+            <Link href="/workspace/" className="btn">Open the workspace</Link>
+            <Link href="/demo/" className="btn ghost">Try the sample</Link>
+            <Link href="/guide/" className="small">How to use it →</Link>
+          </div>
+          <p className="small dim" style={{ marginTop: "1.2rem" }}>
+            No sign-up. Sessions expire on their own after 30 minutes.
+          </p>
+        </div>
 
-      <div className="panel">
-        <p style={{ margin: 0 }}>
-          <Link href="/demo/">
-            <button>Open the live demo</button>
-          </Link>
-          <span className="dim" style={{ marginLeft: "0.8rem" }}>
-            No sign-up. Synthetic data, labelled as such. Sessions expire on their own.
-          </span>
-        </p>
-      </div>
+        <div className="specimen" aria-label="How the gate scores a sentence">
+          <span className="stamp bad sm">Compile error</span>
+          <div className="sheet">
+            <p className="for" style={{ marginTop: 0 }}>Entailment gate · measured, EVAL.md</p>
+            <div className="measure" style={{ color: "var(--sheet-green)" }}>
+              <span>faithful sentence</span>
+              <span className="bar"><i style={{ width: "99.76%" }} /><span className="tick" /></span>
+              <span>0.9976</span>
+            </div>
+            <div className="measure" style={{ color: "var(--sheet-red)" }}>
+              <span>inflated verb&nbsp;&nbsp;&nbsp;&nbsp;</span>
+              <span className="bar"><i style={{ width: "0.6%" }} /><span className="tick" /></span>
+              <span>0.0015</span>
+            </div>
+            <p className="frame small" style={{ margin: "1.1rem 0 0" }}>
+              The mark is the 0.7 threshold. A sentence scored below it against its own
+              cited facts does not reach the page. There is no weaker fallback.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <h2>What it actually does</h2>
-      <p>
-        <strong>It gives honest verdicts.</strong> When a job posting carries a must-have
-        requirement your fact graph cannot evidence, the verdict is do-not-apply, with the
-        case against stated plainly.
-      </p>
-      <p>
-        <strong>Tailoring is evidence selection, not rephrasing.</strong> A solver chooses
-        which facts make the page under a hard budget, and every omitted fact carries a
-        typed reason. The language model that phrases the bullets never sees the job
-        posting and restates facts faithfully — wording does not shift per job. That is a
-        deliberate design decision, made after watching requirement-steered phrasing
-        produce claims the evidence could not support.
-      </p>
-      <p>
-        <strong>The gate has no fallback.</strong> If the entailment model cannot run, the
-        compile fails with a typed error. It never degrades to a keyword check, and no
-        configuration can turn it off.
-      </p>
+      <section className="section">
+        <h2>What you leave with</h2>
+        <div className="grid3 numbered">
+          <div className="card flat">
+            <h3>Career match</h3>
+            <p className="dim">
+              Apply, or do not apply. Each requirement in the posting is marked matched,
+              partial, or gap, with the evidence named. When a must-have has no evidence,
+              the case against applying is stated plainly.
+            </p>
+          </div>
+          <div className="card flat">
+            <h3>Tailored resume</h3>
+            <p className="dim">
+              A solver picks which of your facts fit this job under a page budget. Edit any
+              line: the gate checks your edit, and a pass is saved into the PDF and docx.
+            </p>
+          </div>
+          <div className="card flat">
+            <h3>Cover letter</h3>
+            <p className="dim">
+              Compiled through the same two gates as the resume. The greeting and closing
+              are fixed template text. The evidence sentences each cite their facts.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <h2>Published limits</h2>
-      <div className="panel limits">
-        <p style={{ margin: 0 }}>{LIMITS}</p>
-      </div>
+      <section className="section">
+        <h2>How it stays honest</h2>
+        <div className="grid3 numbered">
+          <div>
+            <h3>Facts, anchored</h3>
+            <p className="dim">
+              Your resume is read into atomic facts. Each fact must quote your document
+              verbatim. A quote that cannot be found is stored rejected and never used.
+            </p>
+          </div>
+          <div>
+            <h3>Selection, not rewording</h3>
+            <p className="dim">
+              The job decides which facts make the page. The model that phrases them never
+              sees the posting, so wording does not drift toward what the employer wants to
+              hear.
+            </p>
+          </div>
+          <div>
+            <h3>Two gates, no bypass</h3>
+            <p className="dim">
+              A sentence that cites nothing, or carries a number found in no cited fact,
+              fails. Then a pinned entailment model scores the sentence against its facts.
+              If the model cannot run, the compile fails with a typed error.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <h2>Not for</h2>
-      <p className="dim">
-        Not a cover-letter writer, not a keyword stuffer, not an interview coach. It will
-        tell you not to apply.
-      </p>
+      <section className="section">
+        <h2>Published limits</h2>
+        <div className="note limits">
+          <p style={{ margin: 0 }}>{LIMITS}</p>
+        </div>
+      </section>
 
-      <p className="small dim" style={{ marginTop: "3rem" }}>
-        <a href="/docs">API reference</a> ·{" "}
-        <a href="https://github.com/nuwansamaranayake/careercompiler">source</a> · the LLM
-        senses, deterministic code decides, humans approve.
-      </p>
+      <section className="section">
+        <div className="grid2">
+          <div>
+            <h2>Not for</h2>
+            <p className="dim">
+              Not an ATS keyword stuffer. Not a writer that invents achievements. Not a
+              percent-match scorer. It will tell you not to apply.
+            </p>
+          </div>
+          <div>
+            <h2>Your data</h2>
+            <p className="dim">
+              A resume is personal data. It stays in your session&apos;s own tenant, readable
+              only with that session&apos;s token, and is deleted by a retention sweep once it
+              is older than 7 days.
+            </p>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

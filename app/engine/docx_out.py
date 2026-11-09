@@ -12,6 +12,7 @@ import io
 from docx import Document
 from docx.shared import Pt
 
+from .entailment import display_score
 from .facts import AtomicClaim
 from .selector import Omission
 
@@ -64,7 +65,7 @@ def render_docx(
         score = b.get("entailment")
         if score is not None:
             s = doc.add_paragraph(style="List Bullet 2")
-            s.add_run(f"entailment {score:.2f}").font.size = Pt(8)
+            s.add_run(f"entailment {display_score(score)}").font.size = Pt(8)
 
     if omissions:
         doc.add_heading("What was left out, and why", level=1)
@@ -148,7 +149,7 @@ def render_letter_docx(
         score = s.get("entailment")
         if score is not None:
             sc = doc.add_paragraph(style="List Bullet 2")
-            sc.add_run(f"entailment {score:.2f}").font.size = Pt(8)
+            sc.add_run(f"entailment {display_score(score)}").font.size = Pt(8)
 
     buf = io.BytesIO()
     doc.save(buf)

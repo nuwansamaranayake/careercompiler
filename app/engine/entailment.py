@@ -22,12 +22,22 @@ score contradiction as entailment and pass everything — a vacuous gate that lo
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Callable, Protocol
 
 from .facts import AtomicClaim
 from .linker import Bullet
+
+
+def display_score(score: float) -> str:
+    """A score as a document prints it: two decimals, truncated, never rounded up.
+
+    0.9951 prints 0.99. Rounded, it printed 1.00 in the provenance appendix, which reads
+    as certainty the model did not report (found 2026-11-09). The epsilon only absorbs
+    float representation, so 0.29 stays 0.29."""
+    return f"{math.floor(score * 100 + 1e-9) / 100:.2f}"
 
 
 class EntailmentUnavailable(Exception):

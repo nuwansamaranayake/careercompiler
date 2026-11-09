@@ -72,3 +72,27 @@ def test_pdf_escapes_markup_in_fact_text(client, monkeypatch):
     r = client.get(f"/api/v1/compile/{did}/pdf")
     assert r.status_code == 200
     assert "Data & Insights" in _pdf_text(r.content)
+
+
+def test_scores_print_truncated_never_rounded_up(client, monkeypatch):
+    """0.9951 is not 1.00. The appendix prints what the model reported, floored to two
+    decimals, in the PDF and the docx alike."""
+    from docx import Document
+    from app.engine import entailment
+    from app.engine.entailment import display_score
+
+    assert [display_score(v) for v in (0.9951, 0.9999, 1.0, 0.7, 0.29, 0.005)] == \
+        ["0.99", "0.99", "1.00", "0.70", "0.29", "0.00"]
+
+    monkeypatch.setattr(entailment, "_load", lambda mid, rev: (lambda p, h: 0.9951))
+    cid, jid, ids = _seed(client)
+    _stub_render(monkeypatch, [
+        {"text": "Ran Kubernetes in production at Globex.", "cites": [ids[2]]}])
+    did = client.post("/api/v1/compile", json={"candidate_id": cid, "job_id": jid},
+                      headers={}).json()["document_id"]
+
+    text = _pdf_text(client.get(f"/api/v1/compile/{did}/pdf", headers={}).content)
+    assert "entailment 0.99" in text and "entailment 1.00" not in text
+    docx = client.get(f"/api/v1/compile/{did}/docx", headers={}).content
+    body = "\n".join(p.text for p in Document(io.BytesIO(docx)).paragraphs)
+    assert "entailment 0.99" in body and "entailment 1.00" not in body

@@ -21,6 +21,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (HRFlowable, PageBreak, Paragraph, SimpleDocTemplate)
 
+from .entailment import display_score
 from .facts import AtomicClaim
 from .selector import Omission
 
@@ -84,7 +85,7 @@ def _provenance_story(bullets: list[dict], claims_by_id: dict[str, AtomicClaim],
                 f"fact {_esc(cid)}</font>", S_FACT))
         score = b.get("entailment")
         if score is not None:
-            story.append(Paragraph(f"entailment {score:.2f}", S_SMALL))
+            story.append(Paragraph(f"entailment {display_score(score)}", S_SMALL))
     if omissions:
         story.append(Paragraph("WHAT WAS LEFT OUT, AND WHY", S_SECTION))
         story.append(Paragraph(
